@@ -16,6 +16,7 @@ import { Dialog } from "../../components/ui/Dialog";
 import { useToast } from "../../components/ui/toast-context";
 import {
   type Cart,
+  type CartCustomer,
   checkoutError,
   lineErrorsFromApi,
   matchesSale,
@@ -60,6 +61,33 @@ function PosProviderInner({ storageKey: key }: { storageKey: string }) {
   const location = useLocation();
 
   useEffect(() => saveTabs(key, state), [key, state]);
+
+  // "Ghi nợ" từ Sổ nợ: navigate("/ban-hang", { state: { customer } }). Xử lý một lần rồi xóa state
+  // khỏi lịch sử để tải lại trang / bấm Back không mở thêm đơn.
+  const handoff = (location.state as { customer?: CartCustomer } | null)?.customer;
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+  // StrictMode chạy effect hai lần: mỗi mục lịch sử chỉ xử lý một lần (không toast hai lần).
+  const handledKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!handoff || handledKeyRef.current === location.key) return;
+    handledKeyRef.current = location.key;
+    const action: PosTabsAction = { type: "openForCustomer", customer: handoff };
+    if (posTabsReducer(stateRef.current, action) === stateRef.current) {
+      toast({
+        tone: "error",
+        message: "Đã mở đủ 10 hóa đơn. Đóng bớt một hóa đơn rồi chọn khách để bán.",
+      });
+    } else {
+      rawDispatch(action);
+    }
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: null },
+    );
+  }, [handoff, location.key, location.pathname, location.search, navigate, toast]);
 
   const active = state.tabs.find((t) => t.id === state.activeId) ?? state.tabs[0]!;
 

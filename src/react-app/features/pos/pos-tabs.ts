@@ -2,7 +2,7 @@
 // trang không mất đơn. Reducer thuần để test riêng.
 import { z } from "zod";
 import { uuidv7 } from "../../../shared/uuid";
-import { type Cart, emptyCart } from "./cart";
+import { type Cart, type CartCustomer, emptyCart } from "./cart";
 
 export const MAX_TABS = 10;
 
@@ -19,7 +19,12 @@ export type PosTabsAction =
   /** Bán xong: thay bằng đơn trống (idempotencyKey mới), giữ số thứ tự tab. */
   | { type: "reset"; id: string }
   /** Giữ nội dung nhưng đổi idempotencyKey (key cũ đã thuộc một hóa đơn khác). */
-  | { type: "rekey"; id: string };
+  | { type: "rekey"; id: string }
+  /**
+   * "Ghi nợ" từ Sổ nợ: bán cho khách này. Đơn đang mở còn trống thì dùng luôn, có tab trống của
+   * đúng khách này thì chuyển sang, không thì mở đơn mới (đủ 10 đơn thì giữ nguyên).
+   */
+  | { type: "openForCustomer"; customer: CartCustomer };
 
 export function initialTabs(): PosTabsState {
   const cart = emptyCart(1);
@@ -65,6 +70,30 @@ export function posTabsReducer(state: PosTabsState, action: PosTabsAction): PosT
           t.id === action.id ? { ...emptyCart(t.number), id: t.id } : t,
         ),
       };
+    case "openForCustomer": {
+      const isBlank = (t: Cart) => t.lines.length === 0 && t.discount === 0 && t.paid === null;
+      const same = state.tabs.find((t) => isBlank(t) && t.customer?.id === action.customer.id);
+      // Dùng lại đơn trống của khách này, cập nhật nợ/hạn mức mới nhất.
+      if (same) {
+        return {
+          tabs: state.tabs.map((t) => (t.id === same.id ? { ...t, customer: action.customer } : t)),
+          activeId: same.id,
+        };
+      }
+      const active = state.tabs.find((t) => t.id === state.activeId);
+      if (active && isBlank(active) && active.customer === null) {
+        return {
+          ...state,
+          tabs: state.tabs.map((t) =>
+            t.id === active.id ? { ...t, customer: action.customer } : t,
+          ),
+        };
+      }
+      if (state.tabs.length >= MAX_TABS) return state;
+      const cart = { ...emptyCart(nextNumber(state.tabs)), customer: action.customer };
+      const tabs = [...state.tabs, cart].sort((a, b) => a.number - b.number);
+      return { tabs, activeId: cart.id };
+    }
     case "rekey":
       return {
         ...state,

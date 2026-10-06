@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { GuestOnly, HOME_PATH, RequireAuth, RequireOwner } from "./features/auth/guards";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
+import { DebtBookPage } from "./features/debts/DebtBookPage";
 import { DocumentListPage } from "./features/documents/DocumentListPage";
 import { NotFoundPage, PlaceholderPage } from "./features/placeholder/PlaceholderPage";
 import { MobileCheckoutPage } from "./features/pos/MobileCheckoutPage";
@@ -36,6 +37,8 @@ export const routes: RouteObject[] = [
     children: [
       // Hóa đơn in: không có khung app (giai đoạn 14).
       { path: "/in/hoa-don/:id", element: <PlaceholderPage /> },
+      { path: "/in/phieu-thu/:id", element: <PlaceholderPage /> },
+      { path: "/in/phieu-chi/:id", element: <PlaceholderPage /> },
       {
         element: <AppShell />,
         children: [
@@ -64,8 +67,12 @@ export const routes: RouteObject[] = [
             handle: meta("Hàng hóa", "Kiểm kho"),
             element: <StockCountPage />,
           },
-          page("/so-no", "Vận hành", "Sổ nợ"),
-          page("/so-no/:contactId", "Sổ nợ", "Chi tiết công nợ"),
+          { path: "/so-no", handle: meta("Vận hành", "Sổ nợ"), element: <DebtBookPage /> },
+          {
+            path: "/so-no/:contactId",
+            handle: meta("Vận hành", "Sổ nợ"),
+            element: <DebtBookPage />,
+          },
           page("/cai-dat", "Hệ thống", "Cài đặt"),
           {
             element: <RequireOwner />,

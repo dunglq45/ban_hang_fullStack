@@ -78,3 +78,52 @@ describe("nhiều hóa đơn", () => {
     expect(loadTabs(key).tabs[0]!.lines).toEqual([]);
   });
 });
+
+describe("ghi nợ từ Sổ nợ", () => {
+  const lan = {
+    id: "kh-lan",
+    code: "KH000027",
+    name: "Chị Lan",
+    phone: "0912345678",
+    debt: 363_000,
+    debtLimit: 1_000_000,
+  };
+
+  it("đơn đang mở còn trống: gắn khách vào luôn", () => {
+    const start = initialTabs();
+    const next = posTabsReducer(start, { type: "openForCustomer", customer: lan });
+    expect(next.tabs).toHaveLength(1);
+    expect(next.tabs[0]!.customer).toEqual(lan);
+  });
+
+  it("đơn đang mở có hàng: mở đơn mới cho khách; gọi lại thì chuyển về đơn đó", () => {
+    const start = run(initialTabs());
+    const withLine = posTabsReducer(start, {
+      type: "update",
+      id: start.activeId,
+      update: (c) => addProduct(c, product),
+    });
+    const next = posTabsReducer(withLine, { type: "openForCustomer", customer: lan });
+    expect(next.tabs).toHaveLength(2);
+    expect(next.tabs.find((t) => t.id === next.activeId)!.customer?.id).toBe("kh-lan");
+    const back = posTabsReducer(
+      { ...next, activeId: withLine.activeId },
+      { type: "openForCustomer", customer: lan },
+    );
+    expect(back.tabs).toHaveLength(2);
+    expect(back.activeId).toBe(next.activeId);
+  });
+
+  it("đủ 10 đơn đều có hàng: giữ nguyên trạng thái", () => {
+    let state = initialTabs();
+    for (let i = 0; i < MAX_TABS; i++) {
+      state = posTabsReducer(state, {
+        type: "update",
+        id: state.activeId,
+        update: (c) => addProduct(c, product),
+      });
+      if (i < MAX_TABS - 1) state = posTabsReducer(state, { type: "new" });
+    }
+    expect(posTabsReducer(state, { type: "openForCustomer", customer: lan })).toBe(state);
+  });
+});
