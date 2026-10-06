@@ -29,3 +29,23 @@ export function codeStatements(db: Database, storeId: string, kind: CounterKind)
     code: sql<string>`(SELECT ${kind} || printf('%0${sql.raw(String(CODE_DIGITS))}d', ${counters.value}) FROM ${counters} WHERE ${counters.storeId} = ${storeId} AND ${counters.kind} = ${kind})`,
   };
 }
+
+/**
+ * Mã người dùng tự nhập theo đúng mẫu `${kind}<số>` (vd. SP000200, SP0052): trả về phần số,
+ * để đẩy bộ đếm lên ít nhất bằng số đó (tránh sau này tự sinh trùng). Không theo mẫu thì null.
+ */
+export function codeNumber(kind: CounterKind, code: string): number | null {
+  const m = /^([A-Za-z]+)(\d{1,9})$/.exec(code);
+  return m && m[1]!.toUpperCase() === kind ? Number(m[2]) : null;
+}
+
+/** Đặt bộ đếm >= n (không bao giờ giảm). Dùng khi người dùng tự nhập mã theo mẫu của hệ thống. */
+export function counterAtLeast(db: Database, storeId: string, kind: CounterKind, n: number) {
+  return db
+    .insert(counters)
+    .values({ storeId, kind, value: n })
+    .onConflictDoUpdate({
+      target: [counters.storeId, counters.kind],
+      set: { value: sql`MAX(${counters.value}, excluded.value)` },
+    });
+}

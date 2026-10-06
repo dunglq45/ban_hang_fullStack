@@ -6,6 +6,7 @@ import { csrf } from "./middleware/csrf";
 import { errorHandler, notFoundHandler } from "./middleware/error";
 import { session } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
+import { categoryRoutes, contactRoutes, imageRoutes, productRoutes } from "./routes/catalog";
 import { storeRoutes, userRoutes } from "./routes/store";
 import { purgeStaleAuthData } from "./services/maintenance";
 import type { AppEnv } from "./types";
@@ -20,7 +21,11 @@ const app = new Hono<AppEnv>()
   .get("/health", (c) => c.json({ ok: true }))
   .route("/auth", authRoutes)
   .route("/store", storeRoutes)
-  .route("/users", userRoutes);
+  .route("/users", userRoutes)
+  .route("/categories", categoryRoutes)
+  .route("/products", productRoutes)
+  .route("/images", imageRoutes)
+  .route("/contacts", contactRoutes);
 
 app.onError(errorHandler);
 app.notFound(notFoundHandler);

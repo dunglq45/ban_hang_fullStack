@@ -6,6 +6,21 @@ Quy ước:
 - Tiền và số lượng trong API theo đúng quy ước lưu trữ (VND nguyên, số lượng milli).
 - 🔒 = cần đăng nhập. 👑 = chỉ owner.
 
+## Mã lỗi
+Định nghĩa ở `src/shared/errors.ts` (mã → HTTP status), dùng chung cho client.
+
+| HTTP | Mã |
+|---|---|
+| 400 | VALIDATION_ERROR (kèm `details.fields[{ path, message }]`), BAD_REQUEST, CANNOT_MODIFY_SELF, WRONG_PASSWORD, INVALID_CATEGORY, INVALID_IMAGE |
+| 401 | UNAUTHORIZED, INVALID_CREDENTIALS |
+| 403 | FORBIDDEN, ACCOUNT_DISABLED, CSRF_REJECTED |
+| 404 | NOT_FOUND |
+| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK |
+| 413 | IMAGE_TOO_LARGE |
+| 415 | UNSUPPORTED_MEDIA_TYPE |
+| 429 | TOO_MANY_ATTEMPTS, RATE_LIMITED |
+| 500 | INTERNAL_ERROR |
+
 ## Auth
 | Method | Path | Mô tả |
 |---|---|---|

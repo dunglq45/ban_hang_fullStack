@@ -44,8 +44,9 @@ describe("chống CSRF cho request ghi", () => {
       },
       body: "--x--",
     });
-    // Route chưa có (giai đoạn 04) nên 404, nhưng không bị middleware CSRF chặn.
-    expect(ok.status).toBe(404);
+    // Qua được middleware CSRF (lỗi nếu có là của route ảnh: ảnh hỏng / hàng không tồn tại).
+    expect([403, 415]).not.toContain(ok.status);
+    expect((await errorOf(ok)).code).not.toBe("CSRF_REJECTED");
   });
 
   it("GET không cần header", async () => {

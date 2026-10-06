@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { optionalText, passwordSchema, phoneSchema, requiredText } from "./common";
+import { optionalPhone, optionalText, passwordSchema, phoneSchema, requiredText } from "./common";
 
 export const USER_ROLE_VALUES = ["owner", "staff"] as const;
 
@@ -8,12 +8,7 @@ const roleSchema = z.enum(USER_ROLE_VALUES, { error: "Vai trò không hợp lệ
 export const updateStoreSchema = z.object({
   name: requiredText("tên cửa hàng", 100),
   // SĐT cửa hàng có thể là máy bàn (11 số), nên kiểm tra lỏng hơn SĐT đăng nhập.
-  phone: z
-    .string()
-    .transform((s) => s.replace(/[\s.-]/g, ""))
-    .pipe(z.string().regex(/^(0\d{9,10})?$/, "Số điện thoại cửa hàng gồm 10–11 số, bắt đầu bằng 0"))
-    .nullable()
-    .transform((v) => (v ? v : null)),
+  phone: optionalPhone("Số điện thoại cửa hàng"),
   address: optionalText("địa chỉ", 200),
   receiptFooter: optionalText("lời chào cuối hóa đơn", 300),
 });
