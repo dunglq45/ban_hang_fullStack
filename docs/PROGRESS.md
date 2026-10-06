@@ -12,7 +12,7 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 | 05 API bán hàng | Xong | POST /api/sales, GET /api/documents(/:id), POST /api/documents/:id/cancel (hóa đơn bán); câu chặn `guardChanges`; 155 test |
 | 06 API nhập hàng, kiểm kho | Xong | /api/purchases (tạo nháp/hoàn thành, sửa nháp, hoàn thành), hủy phiếu nhập, /api/stock-counts (tạo, xem, ghi số, quét, hoàn thành); 183 test |
 | 07 API công nợ, báo cáo | Xong | /api/payments (tạo, xem, hủy), /api/contacts/:id/debt-entries, /api/debts/summary, /api/reports/* (overview, revenue-daily, top-products, restock); `shared/period.ts`; seed hoạt động 7 ngày qua bằng service; `docs/BACKEND-STATUS.md`; trang Swagger `/api/docs` (dev); 205 test |
-| 08 Frontend nền tảng | Chưa làm | |
+| 08 Frontend nền tảng | Xong | API client + ApiError + QueryClient (401 → đăng nhập); bộ UI `components/ui` (20 component); AppShell (Sidebar, Header, menu avatar, MobileTabBar); router + guard; Đăng nhập/Đăng ký chạy thật; sửa CSRF cho POST không body; 250 test |
 | 09 Bán hàng (POS) | Chưa làm | |
 | 10 Hàng hóa | Chưa làm | |
 | 11 Nhập hàng, kiểm kho | Chưa làm | |
@@ -109,6 +109,20 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 
 - Sau giai đoạn 07: trang tài liệu API kiểu Swagger `/api/docs` (Swagger UI 5 từ CDN jsDelivr) + `/api/docs/openapi.json` (OpenAPI 3.1). Body/query sinh từ chính schema Zod bằng `z.toJSONSchema(io: "input")`; danh sách endpoint ở `src/worker/dev/openapi.ts`, test đối chiếu với `app.routes`. Chỉ gắn khi `import.meta.env.DEV` (pnpm dev, test); bản build không có (route tạo bằng hàm `docsRoutes()` để tree-shake). Trang tự thêm `X-Requested-With: fetch`; đăng nhập qua `POST /api/auth/login` là cookie tự lưu. App Hono tách sang `src/worker/app.ts` (`index.ts` chỉ còn fetch + scheduled, vẫn re-export `AppType`). Response chưa mô tả schema (chỉ ghi mã thành công + schema lỗi chung).
 
+- Giai đoạn 08: gọi API qua `call(api.x.$get())` (`api/errors.ts`): lỗi JSON → `ApiError(code, message, status, details)`; mất mạng → `NETWORK_ERROR` (status 0); response lạ → `UNKNOWN_ERROR`. `errorMessage(err)` lấy câu hiển thị. `hc` gửi `credentials: "include"` + `X-Requested-With: fetch`.
+- Giai đoạn 08: QueryClient (`api/query-client.ts`): query thử lại 1 lần, không thử lại 4xx; mutation không thử lại. 401 `UNAUTHORIZED` ở bất kỳ query/mutation → `clearSessionData` (`api/session-cache.ts`: đặt `me = null` TRƯỚC rồi hủy + xóa mọi query khác), không áp dụng cho `INVALID_CREDENTIALS`. Đăng nhập/đăng ký: xóa dữ liệu cũ rồi tải lại `me` (staleTime 0). `useMe` refetch mỗi lần quay lại tab (phát hiện tab khác đã đăng xuất).
+- Giai đoạn 08: `RequireAuth` truyền phiên qua `SessionContext`; trang con dùng `useSession()` (đọc context, không đọc cache) để không bao giờ thấy phiên rỗng trong lúc vừa đăng xuất mà chưa kịp chuyển trang. `GuestOnly` (login/register) chuyển vào app khi đã đăng nhập, về trang định mở trước đó (`location.state.from`, kiểm tra bằng `isSafePath` so origin) hoặc `/ban-hang`. Đăng xuất rồi đăng nhập lại thì về trang đang mở lúc đăng xuất. `RequireOwner` bọc `/nhap-hang/*` và `/tong-quan` (nhân viên → `/ban-hang`).
+- Giai đoạn 08: tiêu đề trang khai báo ở `handle` của route (`PageMeta { section, title }`, `lib/page-meta.ts`); Header và `document.title` đọc từ đó. Menu khai báo một chỗ ở `components/layout/nav.ts` (`matches` để Nhập hàng/Kiểm kho sáng mục Hàng hóa, `ownerOnly`, `debtBadge` = `receivable.customers` của `/api/debts/summary`). Tab dưới mobile: Bán hàng, Hàng hóa, Sổ nợ, Báo cáo (chỉ chủ), Thêm (→ `/cai-dat`).
+- Giai đoạn 08: ô nhập dùng mẫu `<Field label error hint required>` + context (`field-context.ts`): Input/MoneyInput/QtyInput/Select/Textarea tự nối `id`, `aria-describedby`, `aria-invalid`. Hàm/hằng không phải component để file riêng (`button-class.ts`, `page-list.ts`, `toast-context.ts`, `field-context.ts`) vì luật react-refresh.
+- Giai đoạn 08: MoneyInput: giá trị `number | null`, hiện "100.000" khi gõ, giữ vị trí con trỏ; gõ phím chỉ nhận chữ số; dán phải qua `parseVnd` (dán "1,5tr", "1.250.000,50", số âm → không nhận); Backspace/Delete vào dấu chấm thì xóa chữ số kề bên; vượt `max` (mặc định MAX_AMOUNT) thì bỏ phím.
+- Giai đoạn 08: số lượng nhập tay: `parseQty`/`formatQtyInput` trong `shared/qty.ts`. Dấu phẩy là dấu thập phân (≤ 3 số lẻ); dấu chấm chỉ là số lẻ khi theo sau 1–2 chữ số ("1.5"); "1.000" KHÔNG rõ nghĩa → null, QtyInput báo đỏ (`aria-invalid`) và trả null cho cha, không lặng lẽ hiểu thành 1. QtyStepper: số < min hoặc chưa hợp lệ → báo đỏ, giá trị giữ nguyên, rời ô thì hiện lại số đang giữ.
+- Giai đoạn 08: Dialog tự viết (không dùng `<dialog>` vì jsdom): portal vào body, `inert` lên `#root` + khóa cuộn khi có hộp thoại mở, giữ focus bằng Tab vòng, Esc đóng, trả focus về nút mở. Toast: `useToast()`; lỗi vào vùng `aria-live="assertive"`, còn lại `polite`; dừng đếm giờ khi rê chuột/focus.
+- Giai đoạn 08: token CSS thêm `primary-hover` (#123A87), `danger-hover`, `subtle` (#F2F4F7: nền badge, hover nút ghost, vạch giữa các dòng bảng); mọi phần tử bấm được có outline focus 2px màu chính (`:focus-visible`), ô nhập dùng viền xanh + ring.
+- Giai đoạn 08: sửa middleware CSRF: trình duyệt gửi POST không body (đăng xuất) kèm `Content-Length: 0`, workerd vẫn cho `body` là stream rỗng nên trước đây bị 415. Nay không Content-Type + (body null hoặc Content-Length 0) = không có body. Có test (body `Uint8Array(0)`); body rỗng mà khai `text/plain` vẫn 415.
+- Giai đoạn 08: `registerFormSchema` (thêm `confirmPassword`, refine khớp mật khẩu) ở `shared/schemas/auth.ts`, chỉ dùng cho form; gửi lên bỏ `confirmPassword`. "Quên mật khẩu?" hiện hướng dẫn (chưa có API đặt lại). Ô cửa hàng ở sidebar chỉ hiển thị (mỗi tài khoản một cửa hàng). Nút thông báo hiện "Chưa có thông báo mới".
+- Giai đoạn 08: test frontend dùng `@testing-library/user-event` (devDependency mới) và helper `src/react-app/test/render-app.tsx` (`mockApi({"METHOD /path": handler})`, `renderApp(path)` với router thật trong bộ nhớ, `sampleMe(role)`, `sampleDebtSummary`). Đã chạy thật đăng ký → đăng xuất → đăng nhập → đăng xuất bằng Chrome headless (CDP) với `pnpm dev`; script nằm ngoài repo.
+- Máy dev: cổng 5173 đang bị một ứng dụng khác chiếm; Vite mặc định chỉ nghe `::1`, Chrome headless qua CDP không vào được `localhost` → khi kiểm thử bằng trình duyệt chạy `pnpm dev --port 5180 --host 127.0.0.1`.
+
 ## Việc còn nợ
 
 - Người dùng tự chạy `wrangler login`, `wrangler d1 create store-app-db`, `wrangler r2 bucket create store-app-images` rồi thay `database_id` trong `wrangler.jsonc` (đang là UUID toàn số 0).
@@ -131,3 +145,10 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 - Kiểu `D1Database` trong chữ ký `seedActivity` không có trong project node (skipLibCheck che đi), nên `scripts/seed.ts` không được kiểm tra kiểu ở chỗ truyền binding.
 - Báo cáo bán chạy: `revenue` là thành tiền dòng (trước chiết khấu hóa đơn), nên tổng có thể lớn hơn doanh thu tổng quan.
 - Nâng `compatibility_date` khi `@cloudflare/vitest-pool-workers` có bản đi kèm workerd mới hơn 2026-08-22.
+- Giai đoạn 08: POS (giai đoạn 09) phải đưa focus ra khỏi QtyStepper/QtyInput trước khi thanh toán bằng phím tắt (F9), để số đang gõ dở (chưa hợp lệ) không khác số được tính.
+- Giai đoạn 08: QtyInput chưa có tùy chọn chỉ nhận số nguyên cho đơn vị đếm (cái, chai); thêm prop khi làm POS/nhập hàng nếu cần.
+- Giai đoạn 08: Tabs chưa nối `aria-controls`/tabpanel (đang dùng làm bộ lọc danh sách); hộp thoại lồng nhau thì hộp dưới không bị inert (chỉ `#root` bị inert).
+- Giai đoạn 08: đăng xuất ở tab khác chỉ được phát hiện khi quay lại tab (refetch `me`) hoặc khi API trả 401; chưa dùng BroadcastChannel.
+- Giai đoạn 08: tên ứng dụng tạm "Quản lý cửa hàng" (design ghi "[Tên ứng dụng]"), chưa có số hotline nên bỏ dòng "Cần hỗ trợ?" ở trang đăng nhập.
+- Giai đoạn 08: Pagination khi `page` vượt số trang thì dòng "Hiển thị" sai (from > to); trang dùng cần tự kéo `page` về trang cuối khi dữ liệu giảm.
+- Giai đoạn 08: chưa có test trình duyệt tự động trong repo (đã chạy tay bằng CDP); cân nhắc Playwright ở giai đoạn 15.

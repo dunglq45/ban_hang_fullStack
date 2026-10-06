@@ -15,16 +15,20 @@
   --color-line-input: #d0d5dd;
   --color-page: #f6f7f9;
   --color-table-head: #f9fafb;
+  /* Nền xám nhạt: badge đếm, hover nút ghost; cũng là vạch kẻ giữa các dòng bảng */
+  --color-subtle: #f2f4f7;
 
   /* Màu chính; nền nhạt = màu chính alpha 8% */
   --color-primary: #1849a9;
   --color-primary-soft: rgb(24 73 169 / 0.08);
+  --color-primary-hover: #123a87;
 
   /* Trạng thái: nợ/sắp hết, hết hàng, tăng/đã trả */
   --color-warn: #b54708;
   --color-warn-dot: #f79009;
   --color-danger: #b42318;
   --color-danger-dot: #f04438;
+  --color-danger-hover: #912018;
   --color-success: #067647;
   --color-success-dot: #12b76a;
 
@@ -43,7 +47,21 @@
   text-align: right;
 }
 
+/* Viền focus rõ ràng khi dùng bàn phím (không hiện khi bấm chuột). */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
 @layer base {
+  /* Mọi phần tử bấm được có viền focus khi dùng bàn phím. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
   body {
     @apply bg-page font-sans text-ink antialiased;
   }

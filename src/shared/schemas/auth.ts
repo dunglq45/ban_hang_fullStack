@@ -20,3 +20,15 @@ export const loginSchema = z.object({
 
 export type RegisterInput = z.input<typeof registerSchema>;
 export type LoginInput = z.input<typeof loginSchema>;
+
+/** Form đăng ký trên giao diện: thêm ô nhập lại mật khẩu (không gửi lên server). */
+export const registerFormSchema = registerSchema
+  .extend({
+    confirmPassword: z.string({ error: "Vui lòng nhập lại mật khẩu" }),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "Mật khẩu nhập lại không khớp",
+    path: ["confirmPassword"],
+  });
+
+export type RegisterFormInput = z.input<typeof registerFormSchema>;
