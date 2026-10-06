@@ -79,6 +79,8 @@ export const sessions = sqliteTable("sessions", {
     .references(() => users.id),
   storeId: text("store_id").notNull(),
   expiresAt: integer("expires_at").notNull(),
+  // 1 = "Ghi nhớ đăng nhập": cookie có Max-Age 30 ngày; 0 = cookie phiên (mất khi đóng trình duyệt)
+  remember: integer("remember", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull(),
 });
 

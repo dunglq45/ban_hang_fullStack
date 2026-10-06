@@ -2,6 +2,7 @@
 // lúc tạo và không nhận storeId từ bên ngoài nữa. Sau này shard theo cửa hàng chỉ cần đổi ở đây.
 import { type DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { createRepositories } from "../repositories";
+import { authRepository } from "../repositories/auth";
 import * as schema from "./schema";
 
 export type Database = DrizzleD1Database<typeof schema>;
@@ -16,3 +17,8 @@ export function getDb(env: Pick<Env, "DB">, storeId: string) {
 }
 
 export type StoreDb = ReturnType<typeof getDb>;
+
+/** Truy vấn cấp hệ thống cho đăng ký, đăng nhập và phiên (chạy trước khi biết storeId). */
+export function getAuthDb(env: Pick<Env, "DB">) {
+  return authRepository(createDatabase(env.DB));
+}

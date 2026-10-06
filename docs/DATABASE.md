@@ -31,6 +31,7 @@ CREATE TABLE sessions (
   user_id TEXT NOT NULL REFERENCES users(id),
   store_id TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
+  remember INTEGER NOT NULL DEFAULT 0, -- 1: cookie 30 ngày; 0: cookie phiên
   created_at INTEGER NOT NULL
 );
 

@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import { errorOf, rawFetch } from "../helpers/api";
+import { createStore } from "../helpers/stores";
+
+const loginBody = JSON.stringify({ phone: "0900000009", password: "123456" });
+
+describe("chống CSRF cho request ghi", () => {
+  it("thiếu X-Requested-With → 403 CSRF_REJECTED", async () => {
+    const res = await rawFetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: loginBody,
+    });
+    expect(res.status).toBe(403);
+    expect((await errorOf(res)).code).toBe("CSRF_REJECTED");
+  });
+
+  it("gửi dạng form → 415 UNSUPPORTED_MEDIA_TYPE", async () => {
+    for (const type of ["application/x-www-form-urlencoded", "text/plain", "multipart/form-data"]) {
+      const res = await rawFetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": type, "X-Requested-With": "fetch" },
+        body: "phone=0900000009&password=123456",
+      });
+      expect(res.status).toBe(415);
+      expect((await errorOf(res)).code).toBe("UNSUPPORTED_MEDIA_TYPE");
+    }
+  });
+
+  it("route upload ảnh được miễn kiểm tra Content-Type nhưng vẫn cần X-Requested-With", async () => {
+    const store = await createStore();
+    const noHeader = await rawFetch("/api/products/abc/image", {
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data; boundary=x", Cookie: store.owner.cookie },
+      body: "--x--",
+    });
+    expect((await errorOf(noHeader)).code).toBe("CSRF_REJECTED");
+    const ok = await rawFetch("/api/products/abc/image", {
+      method: "POST",
+      headers: {
+        "Content-Type": "multipart/form-data; boundary=x",
+        "X-Requested-With": "fetch",
+        Cookie: store.owner.cookie,
+      },
+      body: "--x--",
+    });
+    // Route chưa có (giai đoạn 04) nên 404, nhưng không bị middleware CSRF chặn.
+    expect(ok.status).toBe(404);
+  });
+
+  it("GET không cần header", async () => {
+    const res = await rawFetch("/api/health");
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("middleware lỗi", () => {
+  it("JSON hỏng → 400 BAD_REQUEST", async () => {
+    const res = await rawFetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: "{không phải json",
+    });
+    expect(res.status).toBe(400);
+    expect((await errorOf(res)).code).toBe("BAD_REQUEST");
+  });
+
+  it("thiếu trường dùng thông báo tiếng Việt", async () => {
+    const res = await rawFetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: "{}",
+    });
+    const err = await errorOf(res);
+    expect(err.code).toBe("VALIDATION_ERROR");
+    expect(err.message).toBe("Vui lòng nhập số điện thoại");
+  });
+});

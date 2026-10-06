@@ -4,6 +4,8 @@ import type { Database } from "../db/client";
 import type { CounterKind } from "../db/schema";
 import { codeStatements } from "../lib/codes";
 import { categoriesRepository } from "./categories";
+import { storeRepository } from "./store";
+import { usersRepository } from "./users";
 
 export function createRepositories(db: Database, storeId: string) {
   return {
@@ -14,6 +16,8 @@ export function createRepositories(db: Database, storeId: string) {
       /** Câu tăng bộ đếm + subquery lấy mã; đặt `bump` trước câu dùng `code` trong cùng batch. */
       next: (kind: CounterKind) => codeStatements(db, storeId, kind),
     },
+    store: storeRepository(db, storeId),
+    users: usersRepository(db, storeId),
     categories: categoriesRepository(db, storeId),
   };
 }
