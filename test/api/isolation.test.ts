@@ -4,7 +4,7 @@ import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { errorOf, rawFetch } from "../helpers/api";
 import { contactInput, createContact, createProduct, productInput } from "../helpers/catalog";
-import { saleInput, sell } from "../helpers/sales";
+import { purchase, purchaseInput, saleInput, sell } from "../helpers/sales";
 import { createTwoStores } from "../helpers/stores";
 
 describe("cô lập dữ liệu giữa hai cửa hàng", () => {
@@ -177,5 +177,48 @@ describe("cô lập bán hàng và chứng từ (giai đoạn 05)", () => {
       saleInput([{ ...line, productId: pb.id }], { idempotencyKey: key }),
     );
     expect(db2.id).not.toBe(da.id);
+  });
+});
+
+describe("cô lập nhập hàng và kiểm kho (giai đoạn 06)", () => {
+  it("B không nhập hàng của A, không dùng NCC của A, không xem/sửa/hoàn thành phiếu của A", async () => {
+    const { a, b } = await createTwoStores();
+    const p = await createProduct(a.owner, { openingStock: 5_000 });
+    const ncc = await createContact(a.owner, { type: "supplier", name: "NCC A" });
+    const line = { productId: p.id, unitName: "Chai", qty: 1_000, unitPrice: 30_000 };
+    const draft = await purchase(a.owner, purchaseInput([line], { status: "draft" }));
+
+    const foreign = await b.owner.api.purchases.$post({ json: purchaseInput([line]) });
+    expect((await errorOf(foreign)).code).toBe("NOT_FOUND");
+    const own = await createProduct(b.owner);
+    const useNcc = await b.owner.api.purchases.$post({
+      json: purchaseInput([{ ...line, productId: own.id }], { contactId: ncc.id, paid: 0 }),
+    });
+    expect((await errorOf(useNcc)).code).toBe("INVALID_CONTACT");
+    const put = await b.owner.api.purchases[":id"].$put({
+      param: { id: draft.id },
+      json: purchaseInput([{ ...line, productId: own.id }]),
+    });
+    expect(put.status).toBe(404);
+    const complete = await b.owner.api.purchases[":id"].complete.$post({ param: { id: draft.id } });
+    expect(complete.status).toBe(404);
+
+    const count = await (
+      await a.owner.api["stock-counts"].$post({ json: { productIds: [p.id] } })
+    ).json();
+    const sc = b.owner.api["stock-counts"][":id"];
+    expect((await sc.$get({ param: { id: count.id } })).status).toBe(404);
+    const lines = await sc.lines.$patch({
+      param: { id: count.id },
+      json: { lines: [{ lineId: count.lines[0]!.id, actualQty: 0 }] },
+    });
+    expect(lines.status).toBe(404);
+    expect((await sc.complete.$post({ param: { id: count.id } })).status).toBe(404);
+    const withForeign = await b.owner.api["stock-counts"].$post({ json: { productIds: [p.id] } });
+    expect(withForeign.status).toBe(404);
+
+    // Dữ liệu A không đổi.
+    const still = await (await a.owner.api.products[":id"].$get({ param: { id: p.id } })).json();
+    expect(still.stock).toBe(5_000);
   });
 });

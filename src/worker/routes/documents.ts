@@ -3,7 +3,8 @@ import { idParamSchema } from "../../shared/schemas/common";
 import { createSaleSchema, listDocumentsQuerySchema } from "../../shared/schemas/document";
 import { validate } from "../lib/validate";
 import { requireAuth, requireOwner } from "../middleware/session";
-import { cancelDocument, getDocument, listDocuments } from "../services/documents";
+import { cancelDocument } from "../services/cancel";
+import { getDocument, listDocuments } from "../services/documents";
 import { createSale } from "../services/sales";
 import type { AuthEnv } from "../types";
 

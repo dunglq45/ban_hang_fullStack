@@ -1,10 +1,8 @@
 // Bán hàng: docs/DATABASE.md "Bán hàng (sale)". Lõi nghiệp vụ quan trọng nhất.
 import type { z } from "zod";
-import { formatQty, lineAmount, toBaseQty } from "../../shared/qty";
+import { lineAmount, toBaseQty } from "../../shared/qty";
 import { formatVnd } from "../../shared/money";
-import { MAX_AMOUNT } from "../../shared/schemas/common";
 import type { createSaleSchema } from "../../shared/schemas/document";
-import { toSearch } from "../../shared/text";
 import type { StoreDb } from "../db/client";
 import { isConstraintError } from "../lib/db-errors";
 import { isGuardError } from "../lib/guard";
@@ -13,11 +11,17 @@ import { uuidv7 } from "../lib/uuid";
 import type { SaleLine } from "../repositories/stock";
 import type { SessionUser } from "../types";
 import { type DocumentDetail, getDocument } from "./documents";
+import {
+  describeShortage,
+  documentTotals,
+  productOrThrow,
+  replayDocument,
+  resolveUnit,
+  shortages,
+  sumByProduct,
+} from "./lines";
 
 type SaleInput = z.output<typeof createSaleSchema>;
-type ProductForSale = NonNullable<
-  Awaited<ReturnType<StoreDb["products"]["forDocument"]>> extends Map<string, infer P> ? P : never
->;
 
 export interface SaleResult {
   document: DocumentDetail;
@@ -25,47 +29,31 @@ export interface SaleResult {
   replayed: boolean;
 }
 
-/** Hóa đơn đã tạo với cùng idempotencyKey (nếu có). Key của chứng từ loại khác → lỗi. */
 async function replay(db: StoreDb, actor: SessionUser, key: string): Promise<SaleResult | null> {
-  const existing = await db.documents.findByIdempotencyKey(key);
-  if (!existing) return null;
-  if (existing.type !== "sale") {
-    throw new AppError("IDEMPOTENCY_CONFLICT", "Mã chống gửi trùng đã dùng cho chứng từ khác");
-  }
-  return { document: await getDocument(db, actor.role, existing.id), replayed: true };
+  const document = await replayDocument(db, actor.role, key, "sale");
+  return document ? { document, replayed: true } : null;
 }
 
-/** Tìm hệ số quy đổi theo tên đơn vị (không phân biệt dấu/hoa thường). */
-function resolveUnit(p: ProductForSale, unitName: string): { name: string; factor: number } | null {
-  const key = toSearch(unitName);
-  if (toSearch(p.baseUnit) === key) return { name: p.baseUnit, factor: 1 };
-  const unit = p.units.find((u) => toSearch(u.name) === key);
-  return unit ? { name: unit.name, factor: unit.factor } : null;
-}
-
-/** Sau khi batch lỗi CHECK tồn kho: đọc tồn hiện tại để chỉ ra mặt hàng thiếu. */
+/** Sau khi batch lỗi CHECK tồn kho: chỉ ra mặt hàng thiếu. */
 async function outOfStockError(db: StoreDb, required: Map<string, number>): Promise<AppError> {
-  const current = await db.products.forDocument([...required.keys()]);
-  const items = [...required.entries()].flatMap(([productId, requested]) => {
-    const p = current.get(productId);
-    if (!p || p.allowNegative || p.stock >= requested) return [];
-    return [{ productId, name: p.name, unit: p.baseUnit, stock: p.stock, requested }];
-  });
+  const items = await shortages(db, required);
   const first = items[0];
-  const message = first
-    ? `Không đủ hàng trong kho: ${first.name} chỉ còn ${formatQty(Math.max(first.stock, 0), first.unit)}`
-    : "Không đủ hàng trong kho";
-  return new AppError("OUT_OF_STOCK", message, undefined, {
-    ...(first
-      ? {
-          productId: first.productId,
-          name: first.name,
-          stock: first.stock,
-          requested: first.requested,
-        }
-      : {}),
-    items,
-  });
+  return new AppError(
+    "OUT_OF_STOCK",
+    first ? `Không đủ hàng trong kho: ${describeShortage(first)}` : "Không đủ hàng trong kho",
+    undefined,
+    {
+      ...(first
+        ? {
+            productId: first.productId,
+            name: first.name,
+            stock: first.stock,
+            requested: first.requested,
+          }
+        : {}),
+      items,
+    },
+  );
 }
 
 function debtLimitError(
@@ -93,14 +81,8 @@ export async function createSale(
   const productMap = await db.products.forDocument(input.lines.map((l) => l.productId));
   const documentId = uuidv7();
   const now = Date.now();
-  const required = new Map<string, number>();
   const lines: SaleLine[] = input.lines.map((l) => {
-    const p = productMap.get(l.productId);
-    if (!p) {
-      throw new AppError("NOT_FOUND", "Không tìm thấy hàng hóa", undefined, {
-        productId: l.productId,
-      });
-    }
+    const p = productOrThrow(productMap, l.productId);
     if (!p.isActive) {
       throw new AppError("PRODUCT_INACTIVE", `${p.name} đã ngừng bán`, undefined, {
         productId: p.id,
@@ -108,11 +90,6 @@ export async function createSale(
       });
     }
     const unit = resolveUnit(p, l.unitName);
-    if (!unit) {
-      throw new AppError("INVALID_UNIT", `${p.name} không có đơn vị "${l.unitName}"`, undefined, {
-        productId: p.id,
-      });
-    }
     // Quy tắc 4 của prompt: cho bán giá khác giá niêm yết, nhưng staff không bán dưới giá vốn.
     if (actor.role !== "owner" && l.unitPrice < p.costPrice * unit.factor) {
       throw new AppError(
@@ -123,7 +100,6 @@ export async function createSale(
       );
     }
     const baseQty = toBaseQty(l.qty, unit.factor);
-    required.set(p.id, (required.get(p.id) ?? 0) + baseQty);
     return {
       documentId,
       lineId: uuidv7(),
@@ -140,14 +116,11 @@ export async function createSale(
   });
 
   // 3. Tiền.
-  const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-  if (subtotal > MAX_AMOUNT) {
-    throw new AppError("AMOUNT_TOO_LARGE", "Tổng tiền hóa đơn quá lớn");
-  }
-  if (input.discount > subtotal) {
-    throw new AppError("INVALID_DISCOUNT", "Chiết khấu lớn hơn tổng tiền hàng");
-  }
-  const total = subtotal - input.discount;
+  const { subtotal, total, paid, debtAmount } = documentTotals(
+    lines.map((l) => l.lineTotal),
+    input.discount,
+    input.paid,
+  );
   // Chiết khấu cả hóa đơn cũng không được kéo tổng xuống dưới giá vốn khi người bán là staff.
   if (actor.role !== "owner") {
     const cost = lines.reduce((sum, l) => {
@@ -161,8 +134,6 @@ export async function createSale(
       );
     }
   }
-  const paid = Math.min(input.paid, total);
-  const debtAmount = total - paid;
 
   const overrideLimit = input.force && actor.role === "owner";
   let contactId: string | null = null;
@@ -235,7 +206,7 @@ export async function createSale(
       if (again) return again;
     }
     if (isConstraintError(err, "CHECK", "products_stock_check")) {
-      throw await outOfStockError(db, required);
+      throw await outOfStockError(db, sumByProduct(lines));
     }
     // Câu chặn hạn mức nợ: có hóa đơn khác vừa ghi nợ cho cùng khách.
     if (isGuardError(err) && contactId) {

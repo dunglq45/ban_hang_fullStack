@@ -11,11 +11,11 @@ Quy ước:
 
 | HTTP | Mã |
 |---|---|
-| 400 | VALIDATION_ERROR (kèm `details.fields[{ path, message }]`), BAD_REQUEST, CANNOT_MODIFY_SELF, WRONG_PASSWORD, INVALID_CATEGORY, INVALID_IMAGE, INVALID_UNIT, INVALID_CONTACT, INVALID_DISCOUNT, AMOUNT_TOO_LARGE, DEBT_REQUIRES_CUSTOMER |
+| 400 | VALIDATION_ERROR (kèm `details.fields[{ path, message }]`), BAD_REQUEST, CANNOT_MODIFY_SELF, WRONG_PASSWORD, INVALID_CATEGORY, INVALID_IMAGE, INVALID_UNIT, INVALID_CONTACT, INVALID_DISCOUNT, AMOUNT_TOO_LARGE, DEBT_REQUIRES_CUSTOMER, DEBT_REQUIRES_SUPPLIER, REASON_REQUIRED (`details.lines[]`), TOO_MANY_LINES |
 | 401 | UNAUTHORIZED, INVALID_CREDENTIALS |
 | 403 | FORBIDDEN, ACCOUNT_DISABLED, CSRF_REJECTED, PRICE_BELOW_COST |
-| 404 | NOT_FOUND |
-| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK, OUT_OF_STOCK (`details: { productId, name, stock, requested, items[] }`), PRODUCT_INACTIVE, DEBT_LIMIT_EXCEEDED (`details: { debt, debtLimit, debtAmount }`), ALREADY_CANCELLED, INVALID_STATUS, IDEMPOTENCY_CONFLICT |
+| 404 | NOT_FOUND, PRODUCT_NOT_IN_COUNT |
+| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK, OUT_OF_STOCK (`details: { productId, name, stock, requested, items[] }`), PRODUCT_INACTIVE, DEBT_LIMIT_EXCEEDED (`details: { debt, debtLimit, debtAmount }`), ALREADY_CANCELLED, INVALID_STATUS, IDEMPOTENCY_CONFLICT, CANNOT_CANCEL_STOCK_USED (`details.items[]`) |
 | 413 | IMAGE_TOO_LARGE |
 | 415 | UNSUPPORTED_MEDIA_TYPE |
 | 429 | TOO_MANY_ATTEMPTS, RATE_LIMITED |
@@ -59,7 +59,8 @@ Quy ước:
 
 ## Chứng từ
 | POST | /api/sales | 🔒 tạo hóa đơn bán (xem DATABASE.md). 201 = tạo mới, 200 = idempotencyKey đã dùng (trả hóa đơn cũ). `force` chỉ có tác dụng với owner |
-| POST | /api/purchases | 🔒👑 tạo phiếu nhập (status `draft` hoặc `completed`) |
+| POST | /api/purchases | 🔒👑 tạo phiếu nhập (status `draft` hoặc `completed`). 201 = tạo mới, 200 = idempotencyKey đã dùng |
+| PUT | /api/purchases/:id | 🔒👑 sửa phiếu NHÁP (thay đầu phiếu và toàn bộ dòng) |
 | POST | /api/purchases/:id/complete | 🔒👑 hoàn thành phiếu nháp |
 | GET | /api/documents | 🔒 `type, status, contactId, from, to, q` |
 | GET | /api/documents/:id | 🔒 kèm lines, contact, người tạo |
@@ -70,11 +71,11 @@ Quy ước:
 | POST | /api/payments/:id/cancel | 🔒👑 |
 
 ## Kiểm kho
-| POST | /api/stock-counts | 🔒👑 tạo phiếu nháp `{ categoryId? , productIds? }` |
+| POST | /api/stock-counts | 🔒👑 tạo phiếu nháp `{ categoryId? , productIds? }` (có productIds thì bỏ qua categoryId; bỏ trống cả hai = mọi hàng đang bán; tối đa 200 hàng) |
 | GET | /api/stock-counts/:id | 🔒 |
-| PATCH | /api/stock-counts/:id/lines | 🔒 cập nhật hàng loạt `[{ lineId, actualQty, reason }]` |
+| PATCH | /api/stock-counts/:id/lines | 🔒 cập nhật hàng loạt `{ lines: [{ lineId, actualQty (milli hoặc null), reason }] }` |
 | POST | /api/stock-counts/:id/scan | 🔒 `{ barcode }` → actual_qty + 1 đơn vị (theo factor nếu là mã vạch thùng) |
-| POST | /api/stock-counts/:id/complete | 🔒👑 |
+| POST | /api/stock-counts/:id/complete | 🔒👑 trả `{ document, warnings[] }` (hàng đã đếm mà tồn đổi kể từ lúc tạo phiếu) |
 
 ## Báo cáo (👑)
 | GET | /api/reports/overview?period=today|7d|month&from&to | doanh thu, số đơn, TB/đơn, lợi nhuận gộp, biên LN, phải thu, số hàng cần nhập |

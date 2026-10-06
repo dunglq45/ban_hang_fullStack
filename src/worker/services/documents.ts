@@ -2,7 +2,6 @@ import type { z } from "zod";
 import type { listDocumentsQuerySchema } from "../../shared/schemas/document";
 import type { StoreDb } from "../db/client";
 import type { UserRole } from "../db/schema";
-import { isConstraintError } from "../lib/db-errors";
 import { isGuardError } from "../lib/guard";
 import { AppError } from "../lib/errors";
 import { uuidv7 } from "../lib/uuid";
@@ -88,34 +87,23 @@ export async function getDocument(db: StoreDb, role: UserRole, id: string) {
 
 export type DocumentDetail = Awaited<ReturnType<typeof getDocument>>;
 
-/**
- * Hủy chứng từ (chỉ owner, chỉ status completed): sinh bút toán đảo, không sửa/xóa dòng cũ.
- * Câu chặn ngay sau UPDATE status bảo đảm hai request hủy đồng thời chỉ một cái có hiệu lực.
- */
-export async function cancelDocument(db: StoreDb, actor: SessionUser, id: string) {
-  const doc = await db.documents.findById(id);
-  if (!doc) throw new AppError("NOT_FOUND", "Không tìm thấy chứng từ");
-  if (doc.status === "cancelled") {
-    throw new AppError("ALREADY_CANCELLED", `Chứng từ ${doc.code} đã bị hủy trước đó`);
-  }
-  if (doc.status !== "completed") {
-    throw new AppError("INVALID_STATUS", "Chỉ hủy được chứng từ đã hoàn thành");
-  }
-  if (doc.type !== "sale") {
-    throw new AppError("BAD_REQUEST", "Chưa hỗ trợ hủy loại chứng từ này");
-  }
-
-  const lines = await db.documents.lines(id);
+/** Hủy hóa đơn bán (đã hoàn thành): cộng lại tồn, đảo nợ khách. Gọi từ services/cancel.ts. */
+export async function cancelSale(
+  db: StoreDb,
+  actor: SessionUser,
+  doc: { id: string; code: string; contactId: string | null; debtAmount: number },
+) {
+  const lines = await db.documents.lines(doc.id);
   const now = Date.now();
   const note = `Hủy ${doc.code}`;
   try {
     await db.batchAll([
-      db.documents.markCancelled(id, actor.id, now),
+      db.documents.markCancelled(doc.id, actor.id, now),
       db.guardChanges(1),
-      // Hủy bán: cộng lại tồn theo đúng số đã trừ, giá vốn ghi theo giá đã chụp ở dòng phiếu.
+      // Cộng lại tồn theo đúng số đã trừ, giá vốn ghi theo giá đã chụp ở dòng phiếu.
       ...lines.flatMap((l) =>
         db.stock.reverseLineStatements({
-          documentId: id,
+          documentId: doc.id,
           productId: l.productId,
           delta: l.baseQty,
           unitCost: l.costPrice,
@@ -130,7 +118,7 @@ export async function cancelDocument(db: StoreDb, actor: SessionUser, id: string
             amount: -doc.debtAmount,
             now,
             entryId: uuidv7(),
-            documentId: id,
+            documentId: doc.id,
             note,
           })
         : []),
@@ -139,14 +127,6 @@ export async function cancelDocument(db: StoreDb, actor: SessionUser, id: string
     if (isGuardError(err)) {
       throw new AppError("ALREADY_CANCELLED", `Chứng từ ${doc.code} đã bị hủy trước đó`);
     }
-    // Cộng lại tồn mà vẫn âm, trong khi hàng đã tắt "cho phép bán âm".
-    if (isConstraintError(err, "CHECK", "products_stock_check")) {
-      throw new AppError(
-        "NEGATIVE_STOCK",
-        'Tồn kho của một mặt hàng trong chứng từ đang âm. Hãy kiểm kho hoặc bật "Cho phép bán khi hết hàng" rồi hủy lại',
-      );
-    }
     throw err;
   }
-  return getDocument(db, actor.role, id);
 }

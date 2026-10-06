@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error";
 import { session } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
 import { documentRoutes, saleRoutes } from "./routes/documents";
+import { purchaseRoutes, stockCountRoutes } from "./routes/inventory";
 import { categoryRoutes, contactRoutes, imageRoutes, productRoutes } from "./routes/catalog";
 import { storeRoutes, userRoutes } from "./routes/store";
 import { purgeStaleAuthData } from "./services/maintenance";
@@ -28,7 +29,9 @@ const app = new Hono<AppEnv>()
   .route("/images", imageRoutes)
   .route("/contacts", contactRoutes)
   .route("/sales", saleRoutes)
-  .route("/documents", documentRoutes);
+  .route("/documents", documentRoutes)
+  .route("/purchases", purchaseRoutes)
+  .route("/stock-counts", stockCountRoutes);
 
 app.onError(errorHandler);
 app.notFound(notFoundHandler);

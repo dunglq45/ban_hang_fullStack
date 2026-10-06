@@ -1,9 +1,10 @@
 // Ghi sổ kho (stock_movements) và phiếu kiểm kho. Giai đoạn 05–06 thêm bán, nhập, hủy vào đây.
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { lineAmount } from "../../shared/qty";
 import type { Database } from "../db/client";
 import { documentLines, documents, products, stockMovements } from "../db/schema";
 import { codeStatements } from "../lib/codes";
+import { guardNotExists } from "../lib/guard";
 
 export const OPENING_STOCK_NOTE = "Tồn đầu kỳ";
 
@@ -170,6 +171,200 @@ export function stockRepository(db: Database, storeId: string) {
           createdAt: r.now,
         }),
       ] as const;
+    },
+
+    /**
+     * Nhập kho một dòng phiếu nhập: giá vốn bình quân tính TRƯỚC khi cộng tồn, trong cùng câu
+     * UPDATE (mọi biểu thức trong SET dùng giá trị cũ). Tồn âm coi như 0 (MAX(stock, 0)).
+     * Sau đó ghi sổ kho `purchase` với stock_after qua subquery.
+     */
+    applyPurchaseStatements(r: {
+      documentId: string;
+      productId: string;
+      /** milli đơn vị cơ bản */
+      baseQty: number;
+      /** giá nhập / đơn vị cơ bản sau phân bổ chiết khấu */
+      inUnitCost: number;
+      movementId: string;
+      now: number;
+    }) {
+      const q = r.baseQty;
+      const c = r.inUnitCost;
+      const s = sql`MAX(${products.stock}, 0)`;
+      return [
+        db
+          .update(products)
+          .set({
+            costPrice: sql`CASE WHEN ${s} + ${q} > 0
+              THEN CAST(ROUND((${s} * ${products.costPrice} + ${q} * ${c}) * 1.0 / (${s} + ${q})) AS INTEGER)
+              ELSE ${c} END`,
+            stock: sql`${products.stock} + ${q}`,
+            updatedAt: r.now,
+          })
+          .where(and(eq(products.storeId, storeId), eq(products.id, r.productId))),
+        db.insert(stockMovements).values({
+          id: r.movementId,
+          storeId,
+          productId: r.productId,
+          documentId: r.documentId,
+          type: "purchase",
+          qtyChange: q,
+          stockAfter: currentStock(r.productId),
+          unitCost: c,
+          note: null,
+          createdAt: r.now,
+        }),
+      ] as const;
+    },
+
+    /**
+     * Hủy một dòng phiếu nhập: trừ tồn (CHECK chặn nếu hàng đã bán và không cho bán âm) và tính
+     * ngược giá vốn: tồn còn lại > 0 thì cost = (stock·cost − q·in_cost)/(stock − q), chặn dưới 0;
+     * ngược lại giữ nguyên.
+     */
+    reversePurchaseStatements(r: {
+      documentId: string;
+      productId: string;
+      baseQty: number;
+      inUnitCost: number;
+      movementId: string;
+      note: string;
+      now: number;
+    }) {
+      const q = r.baseQty;
+      const c = r.inUnitCost;
+      return [
+        db
+          .update(products)
+          .set({
+            costPrice: sql`CASE WHEN ${products.stock} - ${q} > 0
+              THEN MAX(0, CAST(ROUND((${products.stock} * ${products.costPrice} - ${q} * ${c}) * 1.0
+                / (${products.stock} - ${q})) AS INTEGER))
+              ELSE ${products.costPrice} END`,
+            stock: sql`${products.stock} - ${q}`,
+            updatedAt: r.now,
+          })
+          .where(and(eq(products.storeId, storeId), eq(products.id, r.productId))),
+        db.insert(stockMovements).values({
+          id: r.movementId,
+          storeId,
+          productId: r.productId,
+          documentId: r.documentId,
+          type: "cancel",
+          qtyChange: -q,
+          stockAfter: currentStock(r.productId),
+          unitCost: c,
+          note: r.note,
+          createdAt: r.now,
+        }),
+      ] as const;
+    },
+
+    /** Dòng phiếu kiểm kho mới: chụp tồn và giá vốn hiện tại qua subquery (đúng thời điểm ghi). */
+    insertCountLine(r: {
+      documentId: string;
+      lineId: string;
+      productId: string;
+      unitName: string;
+    }) {
+      return db.insert(documentLines).values({
+        id: r.lineId,
+        storeId,
+        documentId: r.documentId,
+        productId: r.productId,
+        unitName: r.unitName,
+        factor: 1,
+        qty: 0,
+        baseQty: 0,
+        unitPrice: 0,
+        lineTotal: 0,
+        costPrice: currentCost(r.productId),
+        systemQty: currentStock(r.productId),
+        actualQty: null,
+        reason: null,
+      });
+    },
+
+    /**
+     * Hoàn thành một dòng kiểm kho. Số đếm và lý do đọc thẳng từ dòng phiếu TRONG batch (không dùng
+     * giá trị đọc trước), nên lượt quét/sửa chen vào lúc bấm hoàn thành vẫn được tính đúng.
+     * Chênh lệch = thực tế − tồn HIỆN TẠI (không phải system_qty, vì lúc đếm có thể đã bán).
+     * Dòng chưa đếm (actual_qty NULL) không đổi gì. Thứ tự: ghi chênh lệch vào dòng → ghi sổ kho
+     * `adjust` (xóa lại nếu chênh lệch 0) → đặt tồn = thực tế.
+     */
+    completeCountLineStatements(r: {
+      documentId: string;
+      lineId: string;
+      productId: string;
+      movementId: string;
+      now: number;
+    }) {
+      const lineValue = (column: "actual_qty" | "reason") =>
+        sql`(SELECT l.${sql.raw(column)} FROM ${documentLines} AS l
+          WHERE l.store_id = ${storeId} AND l.id = ${r.lineId})`;
+      const actual = lineValue("actual_qty");
+      const stock = currentStock(r.productId);
+      const cost = currentCost(r.productId);
+      return [
+        db
+          .update(documentLines)
+          .set({
+            qty: sql`${documentLines.actualQty} - ${stock}`,
+            baseQty: sql`${documentLines.actualQty} - ${stock}`,
+            costPrice: cost,
+            unitPrice: cost,
+            lineTotal: sql`CAST(ROUND((${documentLines.actualQty} - ${stock}) * ${cost} / 1000.0) AS INTEGER)`,
+          })
+          .where(
+            and(
+              eq(documentLines.storeId, storeId),
+              eq(documentLines.id, r.lineId),
+              isNotNull(documentLines.actualQty),
+            ),
+          ),
+        db.insert(stockMovements).values({
+          id: r.movementId,
+          storeId,
+          productId: r.productId,
+          documentId: r.documentId,
+          type: "adjust",
+          qtyChange: sql<number>`COALESCE(${actual} - ${stock}, 0)`,
+          stockAfter: sql<number>`COALESCE(${actual}, ${stock})`,
+          unitCost: cost,
+          note: lineValue("reason"),
+          createdAt: r.now,
+        }),
+        // Khớp hoặc chưa đếm thì không để lại dòng sổ kho 0.
+        db
+          .delete(stockMovements)
+          .where(
+            and(
+              eq(stockMovements.storeId, storeId),
+              eq(stockMovements.id, r.movementId),
+              eq(stockMovements.qtyChange, 0),
+            ),
+          ),
+        db
+          .update(products)
+          .set({ stock: sql`COALESCE(${actual}, ${products.stock})`, updatedAt: r.now })
+          .where(and(eq(products.storeId, storeId), eq(products.id, r.productId))),
+      ] as const;
+    },
+
+    /**
+     * Câu chặn: lỗi nếu còn dòng đã đếm, lệch so với tồn HIỆN TẠI mà chưa có lý do. Đặt trước các
+     * câu hoàn thành dòng trong cùng batch.
+     */
+    guardCountReasons(documentId: string) {
+      return guardNotExists(
+        db,
+        storeId,
+        sql`SELECT 1 FROM ${documentLines} AS l
+          JOIN ${products} AS p ON p.id = l.product_id AND p.store_id = ${storeId}
+          WHERE l.store_id = ${storeId} AND l.document_id = ${documentId}
+            AND l.actual_qty IS NOT NULL AND l.actual_qty <> p.stock
+            AND (l.reason IS NULL OR trim(l.reason) = '')`,
+      );
     },
 
     /** Số dòng sổ kho của một mặt hàng (dùng trong test đối chiếu sổ cái). */

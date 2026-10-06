@@ -1,7 +1,7 @@
 // "Chốt chặn" trong batch: D1 không có interactive transaction nên không thể đọc rồi quyết định
 // giữa chừng. Câu chặn đặt NGAY SAU một câu UPDATE có điều kiện; nếu câu đó không đổi dòng nào
 // (vd. chứng từ đã bị hủy bởi request khác) thì câu chặn cố tình gây lỗi để cả batch rollback.
-import { eq, sql } from "drizzle-orm";
+import { eq, type SQL, sql } from "drizzle-orm";
 import type { Database } from "../db/client";
 import { stores } from "../db/schema";
 
@@ -17,6 +17,16 @@ export function guardChanges(db: Database, storeId: string, expected = 1) {
   return db
     .select({
       ok: sql<number>`CASE WHEN changes() = ${expected} THEN 1 ELSE json(${GUARD_MARKER}) END`,
+    })
+    .from(stores)
+    .where(eq(stores.id, storeId));
+}
+
+/** Lỗi (rollback batch) nếu câu SELECT `existsQuery` có ít nhất một dòng. */
+export function guardNotExists(db: Database, storeId: string, existsQuery: SQL) {
+  return db
+    .select({
+      ok: sql<number>`CASE WHEN EXISTS (${existsQuery}) THEN json(${GUARD_MARKER}) ELSE 1 END`,
     })
     .from(stores)
     .where(eq(stores.id, storeId));

@@ -635,7 +635,7 @@ describe("bổ sung sau review giai đoạn 05", () => {
     expect((await errorOf(res)).code).toBe("IDEMPOTENCY_CONFLICT");
   });
 
-  it("hủy chứng từ không phải hóa đơn bán → BAD_REQUEST (giai đoạn 06 làm hủy phiếu nhập)", async () => {
+  it("hủy phiếu kiểm kho đã hoàn thành (tồn đầu kỳ) → INVALID_STATUS", async () => {
     const { store } = await setup();
     const kk = await db
       .select()
@@ -643,7 +643,8 @@ describe("bổ sung sau review giai đoạn 05", () => {
       .where(and(eq(documents.storeId, store.storeId), eq(documents.type, "stock_count")))
       .get();
     const res = await store.owner.api.documents[":id"].cancel.$post({ param: { id: kk!.id } });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
+    expect((await errorOf(res)).code).toBe("INVALID_STATUS");
   });
 
   it("hủy 1 trong 2 hóa đơn nợ: debt_since giữ nguyên, balance_after đúng", async () => {

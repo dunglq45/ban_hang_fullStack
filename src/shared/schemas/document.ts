@@ -63,5 +63,71 @@ export const listDocumentsQuerySchema = paginationSchema.extend({
   q: z.string().trim().max(100).optional(),
 });
 
+/** Dòng phiếu nhập: giá nhập theo đơn vị đã chọn (trước chiết khấu phiếu). */
+export const purchaseLineSchema = saleLineSchema.extend({
+  unitPrice: moneySchema("giá nhập"),
+});
+
+const purchaseBody = {
+  /** Nhà cung cấp; bắt buộc nếu còn nợ. */
+  contactId: idSchema.nullish().transform((v) => v ?? null),
+  lines: z
+    .array(purchaseLineSchema)
+    .min(1, "Phiếu nhập chưa có mặt hàng nào")
+    .max(MAX_DOCUMENT_LINES, `Mỗi phiếu tối đa ${MAX_DOCUMENT_LINES} dòng`),
+  discount: moneySchema("chiết khấu", MAX_AMOUNT).default(0),
+  paid: moneySchema("tiền đã trả", MAX_AMOUNT),
+  paymentMethod: z.enum(PAYMENT_METHOD_VALUES).default("cash"),
+  note: optionalText("ghi chú", 500)
+    .optional()
+    .transform((v) => v ?? null),
+};
+
+export const createPurchaseSchema = z.object({
+  idempotencyKey: idempotencyKeySchema,
+  /** draft: lưu nháp (không đổi tồn, nợ); completed: nhập kho ngay. */
+  status: z.enum(["draft", "completed"]).default("completed"),
+  ...purchaseBody,
+});
+
+/** Sửa phiếu nháp: thay toàn bộ dòng và thông tin thanh toán. */
+export const updatePurchaseSchema = z.object(purchaseBody);
+
+export const createStockCountSchema = z.object({
+  /** Kiểm theo nhóm hàng; bỏ trống cả categoryId và productIds = mọi hàng đang bán. */
+  categoryId: idSchema.nullish().transform((v) => v ?? null),
+  productIds: z
+    .array(idSchema)
+    .max(MAX_DOCUMENT_LINES)
+    .nullish()
+    .transform((v) => v ?? null),
+  note: optionalText("ghi chú", 500)
+    .optional()
+    .transform((v) => v ?? null),
+});
+
+export const updateStockCountLinesSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        lineId: idSchema,
+        /** milli đơn vị cơ bản; null = xóa số đã đếm */
+        actualQty: qtyMilliSchema("số lượng thực tế").nullable(),
+        reason: optionalText("lý do", 200)
+          .optional()
+          .transform((v) => v ?? null),
+      }),
+    )
+    .min(1)
+    .max(MAX_DOCUMENT_LINES),
+});
+
+export const scanSchema = z.object({
+  barcode: z.string().trim().min(1, "Vui lòng nhập mã vạch").max(50),
+});
+
+export type CreatePurchaseInput = z.input<typeof createPurchaseSchema>;
+export type PurchaseLineInput = z.input<typeof purchaseLineSchema>;
+
 export type CreateSaleInput = z.input<typeof createSaleSchema>;
 export type SaleLineInput = z.input<typeof saleLineSchema>;

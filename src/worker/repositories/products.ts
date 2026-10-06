@@ -212,6 +212,22 @@ export function productsRepository(db: Database, storeId: string) {
       return product ? { product, unit } : undefined;
     },
 
+    /** Id các hàng đang bán (theo nhóm nếu có), sắp theo tên: phạm vi phiếu kiểm kho. */
+    async activeIds(categoryId: string | null) {
+      const rows = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(
+          and(
+            eq(products.storeId, storeId),
+            eq(products.isActive, true),
+            categoryId ? eq(products.categoryId, categoryId) : undefined,
+          ),
+        )
+        .orderBy(asc(products.nameSearch));
+      return rows.map((r) => r.id);
+    },
+
     /**
      * Hàng dùng để lập chứng từ (bán, nhập): giá vốn, tồn, trạng thái và các đơn vị quy đổi.
      * Chỉ để tính toán/validate trước batch; tồn kho thật do UPDATE trong batch quyết định.

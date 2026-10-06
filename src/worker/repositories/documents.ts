@@ -32,6 +32,10 @@ const canceller = aliasedTable(users, "canceller");
 export function documentsRepository(db: Database, storeId: string) {
   const inStore = (id: string) => and(eq(documents.storeId, storeId), eq(documents.id, id));
   const contactJoin = and(eq(contacts.id, documents.contactId), eq(contacts.storeId, storeId));
+  /** Điều kiện "chứng từ còn nháp", dùng trong câu UPDATE dòng (alias d để không lẫn bảng). */
+  const isDraft = (documentId: string) =>
+    sql`EXISTS (SELECT 1 FROM ${documents} AS d
+      WHERE d.store_id = ${storeId} AND d.id = ${documentId} AND d.status = 'draft')`;
 
   return {
     findByIdempotencyKey(key: string) {
@@ -172,12 +176,134 @@ export function documentsRepository(db: Database, storeId: string) {
       return db.insert(documents).values({ ...values, storeId });
     },
 
-    /** Chuyển completed → cancelled. Đặt guardChanges ngay sau để chặn hủy hai lần đồng thời. */
-    markCancelled(id: string, actorId: string, now: number) {
+    /**
+     * Chuyển `from` (mặc định completed) → cancelled. Đặt guardChanges ngay sau để chặn hủy hai lần
+     * đồng thời.
+     */
+    markCancelled(id: string, actorId: string, now: number, from: DocumentStatus = "completed") {
       return db
         .update(documents)
         .set({ status: "cancelled", cancelledAt: now, cancelledBy: actorId })
-        .where(and(inStore(id), eq(documents.status, "completed")));
+        .where(and(inStore(id), eq(documents.status, from)));
+    },
+
+    /**
+     * draft → completed. Đặt guardChanges ngay sau để chặn hoàn thành hai lần.
+     * `unchangedLineId`: một dòng đã đọc trước batch; sửa phiếu nháp (PUT) xóa toàn bộ dòng cũ,
+     * nên nếu dòng này không còn thì phiếu vừa bị sửa → không hoàn thành theo dữ liệu cũ.
+     */
+    markCompleted(id: string, now: number, unchangedLineId?: string) {
+      return db
+        .update(documents)
+        .set({ status: "completed", completedAt: now })
+        .where(
+          and(
+            inStore(id),
+            eq(documents.status, "draft"),
+            unchangedLineId
+              ? sql`EXISTS (SELECT 1 FROM ${documentLines} AS l
+                  WHERE l.store_id = ${storeId} AND l.document_id = ${id} AND l.id = ${unchangedLineId})`
+              : undefined,
+          ),
+        );
+    },
+
+    /** Sửa đầu phiếu nháp (chỉ khi còn draft); đặt guardChanges ngay sau. */
+    updateDraft(
+      id: string,
+      values: Partial<
+        Pick<
+          typeof documents.$inferInsert,
+          | "contactId"
+          | "subtotal"
+          | "discount"
+          | "total"
+          | "paid"
+          | "debtAmount"
+          | "paymentMethod"
+          | "note"
+        >
+      >,
+    ) {
+      return db
+        .update(documents)
+        .set(values)
+        .where(and(inStore(id), eq(documents.status, "draft")));
+    },
+
+    deleteLines(documentId: string) {
+      return db
+        .delete(documentLines)
+        .where(and(eq(documentLines.storeId, storeId), eq(documentLines.documentId, documentId)));
+    },
+
+    insertLine(values: Omit<typeof documentLines.$inferInsert, "storeId">) {
+      return db.insert(documentLines).values({ ...values, storeId });
+    },
+
+    /** Dòng phiếu kiểm kho kèm hàng: tên, mã, đơn vị, tồn HIỆN TẠI và giá vốn hiện tại. */
+    countLines(documentId: string) {
+      return db
+        .select({
+          id: documentLines.id,
+          productId: documentLines.productId,
+          productCode: products.code,
+          productName: products.name,
+          baseUnit: products.baseUnit,
+          categoryId: products.categoryId,
+          currentStock: products.stock,
+          currentCost: products.costPrice,
+          systemQty: documentLines.systemQty,
+          actualQty: documentLines.actualQty,
+          reason: documentLines.reason,
+          qty: documentLines.qty,
+          lineTotal: documentLines.lineTotal,
+          costPrice: documentLines.costPrice,
+        })
+        .from(documentLines)
+        .innerJoin(
+          products,
+          and(eq(products.id, documentLines.productId), eq(products.storeId, storeId)),
+        )
+        .where(and(eq(documentLines.storeId, storeId), eq(documentLines.documentId, documentId)))
+        .orderBy(asc(products.nameSearch));
+    },
+
+    /** Ghi số đếm của một dòng; chỉ có tác dụng khi phiếu còn nháp (điều kiện trong câu UPDATE). */
+    setCountLine(
+      documentId: string,
+      lineId: string,
+      actualQty: number | null,
+      reason: string | null,
+    ) {
+      return db
+        .update(documentLines)
+        .set({ actualQty, reason })
+        .where(
+          and(
+            eq(documentLines.storeId, storeId),
+            eq(documentLines.documentId, documentId),
+            eq(documentLines.id, lineId),
+            isDraft(documentId),
+          ),
+        )
+        .returning({ id: documentLines.id });
+    },
+
+    /** Quét mã vạch: cộng thêm `delta` (milli) vào số đếm của hàng trong phiếu nháp. */
+    scanCount(documentId: string, productId: string, delta: number) {
+      return db
+        .update(documentLines)
+        .set({ actualQty: sql`COALESCE(${documentLines.actualQty}, 0) + ${delta}` })
+        .where(
+          and(
+            eq(documentLines.storeId, storeId),
+            eq(documentLines.documentId, documentId),
+            eq(documentLines.productId, productId),
+            isDraft(documentId),
+          ),
+        )
+        .returning({ id: documentLines.id, actualQty: documentLines.actualQty });
     },
   };
 }

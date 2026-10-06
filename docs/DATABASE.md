@@ -262,7 +262,7 @@ Phần chưa trả cộng vào `contacts.debt` của nhà cung cấp và ghi deb
 ### Kiểm kho (`stock_count`)
 - Tạo phiếu nháp với danh sách hàng (theo nhóm hoặc chọn tay). `system_qty` chụp lại tồn lúc tạo.
 - Cập nhật `actual_qty` và `reason` khi đang draft (cho phép sửa).
-- Hoàn thành: với mỗi dòng có actual_qty khác NULL, chênh lệch = `actual_qty - tồn hiện tại`. Lưu ý dùng tồn hiện tại tại thời điểm hoàn thành, không dùng system_qty, vì giữa lúc đếm có thể đã bán hàng. Hiển thị cảnh báo nếu tồn đã đổi. Ghi `UPDATE products SET stock = stock + diff`, stock_movements type `adjust` có `note = reason`.
+- Hoàn thành: với mỗi dòng có actual_qty khác NULL, chênh lệch = `actual_qty - tồn hiện tại`. Lưu ý dùng tồn hiện tại tại thời điểm hoàn thành, không dùng system_qty, vì giữa lúc đếm có thể đã bán hàng. Hiển thị cảnh báo nếu tồn đã đổi. Ghi `UPDATE products SET stock = actual_qty` (trong batch tương đương `stock + diff`), stock_movements type `adjust` có `note = reason`. Số đếm và lý do đọc thẳng từ dòng phiếu trong batch (không dùng giá trị đọc trước), có câu chặn "dòng lệch phải có lý do".
 - Dòng lệch ≠ 0 bắt buộc có reason.
 
 ### Tìm kiếm
