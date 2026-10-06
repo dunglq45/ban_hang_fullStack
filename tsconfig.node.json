@@ -6,5 +6,13 @@
     "lib": ["ES2024"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "drizzle.config.ts", "eslint.config.js", "scripts"]
+  // scripts/seed.ts dùng service của Worker qua .d.ts của project worker (không nạp runtime types).
+  "references": [{ "path": "./tsconfig.worker.json" }],
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "drizzle.config.ts",
+    "eslint.config.js",
+    "scripts"
+  ]
 }

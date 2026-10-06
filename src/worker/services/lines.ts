@@ -78,7 +78,13 @@ export async function replayDocument(
   type: DocumentType,
 ): Promise<DocumentDetail | null> {
   const existing = await db.documents.findByIdempotencyKey(key);
-  if (!existing) return null;
+  if (!existing) {
+    // Khóa của client là duy nhất cho mọi thao tác ghi: trùng với phiếu thu/chi là lỗi phía client.
+    if (await db.payments.findByIdempotencyKey(key)) {
+      throw new AppError("IDEMPOTENCY_CONFLICT", "Mã chống gửi trùng đã dùng cho phiếu thu chi");
+    }
+    return null;
+  }
   if (existing.type !== type) {
     throw new AppError("IDEMPOTENCY_CONFLICT", "Mã chống gửi trùng đã dùng cho chứng từ khác");
   }

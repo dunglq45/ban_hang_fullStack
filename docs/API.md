@@ -15,7 +15,7 @@ Quy ước:
 | 401 | UNAUTHORIZED, INVALID_CREDENTIALS |
 | 403 | FORBIDDEN, ACCOUNT_DISABLED, CSRF_REJECTED, PRICE_BELOW_COST |
 | 404 | NOT_FOUND, PRODUCT_NOT_IN_COUNT |
-| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK, OUT_OF_STOCK (`details: { productId, name, stock, requested, items[] }`), PRODUCT_INACTIVE, DEBT_LIMIT_EXCEEDED (`details: { debt, debtLimit, debtAmount }`), ALREADY_CANCELLED, INVALID_STATUS, IDEMPOTENCY_CONFLICT, CANNOT_CANCEL_STOCK_USED (`details.items[]`) |
+| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK, OUT_OF_STOCK (`details: { productId, name, stock, requested, items[] }`), PRODUCT_INACTIVE, DEBT_LIMIT_EXCEEDED (`details: { debt, debtLimit, debtAmount }`), ALREADY_CANCELLED, INVALID_STATUS, IDEMPOTENCY_CONFLICT, CANNOT_CANCEL_STOCK_USED (`details.items[]`), AMOUNT_EXCEEDS_DEBT (`details: { debt, amount }`) |
 | 413 | IMAGE_TOO_LARGE |
 | 415 | UNSUPPORTED_MEDIA_TYPE |
 | 429 | TOO_MANY_ATTEMPTS, RATE_LIMITED |
@@ -52,10 +52,10 @@ Quy ước:
 
 ## Khách hàng và nhà cung cấp
 | GET | /api/contacts?type=customer|supplier | 🔒 `q, hasDebt, overdueDays, sort=debt_desc|debt_since_asc|name` |
-| GET | /api/contacts/:id | 🔒 |
-| GET | /api/contacts/:id/debt-entries | 🔒 sổ chi tiết công nợ (kèm mã chứng từ hoặc phiếu) |
+| GET | /api/contacts/:id | 🔒 kèm `lastPayment` (lần thu/trả gần nhất còn hiệu lực: code, amount, method, createdAt) hoặc null |
+| GET | /api/contacts/:id/debt-entries | 🔒 sổ chi tiết công nợ, mới nhất trước, phân trang. Mỗi dòng: `createdAt`, `ref { kind: document|payment, id, code, type }`, `description` ("Bán hàng, trả thiếu", "Thu nợ tiền mặt", "Hủy hóa đơn HD…"…), `increase` (phát sinh nợ), `decrease` (đã trả), `balanceAfter` |
 | POST/PUT | /api/contacts(/:id) | 🔒 |
-| GET | /api/debts/summary | 🔒 tổng phải thu, quá 30 ngày, đã thu tháng này; tổng phải trả |
+| GET | /api/debts/summary | 🔒 `receivable { amount, customers }`, `overdue { amount, customers, days: 30 }` (theo ngày bắt đầu nợ), `collectedThisMonth { amount, count }` (tháng theo giờ VN), `payable { amount, suppliers }`, `paidThisMonth { amount, count }`. Staff xem được (đã quyết định không chặn số liệu NCC ở giai đoạn 04) |
 
 ## Chứng từ
 | POST | /api/sales | 🔒 tạo hóa đơn bán (xem DATABASE.md). 201 = tạo mới, 200 = idempotencyKey đã dùng (trả hóa đơn cũ). `force` chỉ có tác dụng với owner |
@@ -67,8 +67,9 @@ Quy ước:
 | POST | /api/documents/:id/cancel | 🔒👑 hủy |
 
 ## Thu chi
-| POST | /api/payments | 🔒 `{ type, contactId, amount, method, note, idempotencyKey }` (disbursement 👑) |
-| POST | /api/payments/:id/cancel | 🔒👑 |
+| POST | /api/payments | 🔒 `{ type, contactId, amount, method, note, idempotencyKey }` (disbursement 👑). receipt: khách hàng, PT; disbursement: NCC, PC. `amount` ≤ nợ hiện tại (`AMOUNT_EXCEEDS_DEBT`). 201 = tạo mới, 200 = idempotencyKey đã dùng |
+| GET | /api/payments/:id | 🔒 phiếu kèm `contact` (nợ hiện tại), `createdBy`, `balanceAfter` (dư nợ ngay sau phiếu), `store` (để in) |
+| POST | /api/payments/:id/cancel | 🔒👑 cộng lại nợ, ghi sổ nợ dòng dương |
 
 ## Kiểm kho
 | POST | /api/stock-counts | 🔒👑 tạo phiếu nháp `{ categoryId? , productIds? }` (có productIds thì bỏ qua categoryId; bỏ trống cả hai = mọi hàng đang bán; tối đa 200 hàng) |
@@ -78,9 +79,9 @@ Quy ước:
 | POST | /api/stock-counts/:id/complete | 🔒👑 trả `{ document, warnings[] }` (hàng đã đếm mà tồn đổi kể từ lúc tạo phiếu) |
 
 ## Báo cáo (👑)
-| GET | /api/reports/overview?period=today|7d|month&from&to | doanh thu, số đơn, TB/đơn, lợi nhuận gộp, biên LN, phải thu, số hàng cần nhập |
-| GET | /api/reports/revenue-daily?days=7 | doanh thu theo ngày (múi giờ Asia/Ho_Chi_Minh) |
-| GET | /api/reports/top-products?period= | bán chạy: số lượng, doanh thu |
-| GET | /api/reports/restock | hàng sắp hết / hết |
+| GET | /api/reports/overview?period=today|7d|month&from&to | `range`, `revenue`, `orders`, `averageOrder`, `costOfGoods`, `grossProfit`, `margin` (%, 1 chữ số, null khi chưa có doanh thu), `receivable { amount, customers, overdueAmount, overdueCustomers }` (số dư hiện tại, không theo kỳ), `restock { total, out, low }`. `from`/`to` là ngày VN `YYYY-MM-DD` (bao gồm cả hai), phải đi cùng nhau, tối đa 366 ngày |
+| GET | /api/reports/revenue-daily?days=7 | đủ N ngày (1–90, tính cả hôm nay), ngày không bán ra 0: `items[{ date, from, revenue, orders }]`, `total`, `orders` |
+| GET | /api/reports/top-products?period=&sort=qty|revenue&limit=10 | `items[{ rank, productId, code, name, baseUnit, qty (milli đơn vị cơ bản), revenue (thành tiền dòng, trước chiết khấu hóa đơn) }]` |
+| GET | /api/reports/restock?page&pageSize | hàng đang bán hết (tồn ≤ 0) hoặc sắp hết (0 < tồn ≤ tối thiểu): hết trước, rồi tỷ lệ tồn/tối thiểu thấp nhất; `items[{ …, status: out|low }]`, `counts { out, low }` |
 
-Ghi chú: mọi tính toán "ngày" dùng múi giờ Asia/Ho_Chi_Minh (UTC+7).
+Ghi chú: mọi tính toán "ngày" dùng múi giờ Asia/Ho_Chi_Minh (UTC+7), helper ở `src/shared/period.ts`. Doanh thu = SUM(total) hóa đơn bán hoàn thành (đã trừ chiết khấu hóa đơn) − phiếu khách trả hàng; hóa đơn bị hủy không tính. Lợi nhuận gộp = doanh thu − giá vốn đã chụp ở từng dòng lúc bán.

@@ -222,3 +222,59 @@ describe("cô lập nhập hàng và kiểm kho (giai đoạn 06)", () => {
     expect(still.stock).toBe(5_000);
   });
 });
+
+describe("cô lập thu chi, sổ nợ, báo cáo (giai đoạn 07)", () => {
+  it("B không thu nợ/trả nợ đối tác của A, không xem/hủy phiếu, sổ nợ, số liệu của A", async () => {
+    const { a, b } = await createTwoStores();
+    const p = await createProduct(a.owner, { openingStock: 10_000 });
+    const lan = await createContact(a.owner);
+    await sell(
+      a.owner,
+      saleInput([{ productId: p.id, unitName: "Chai", qty: 1_000, unitPrice: 38_000 }], {
+        contactId: lan.id,
+        paid: 0,
+      }),
+    );
+    const pt = await (
+      await a.staff.api.payments.$post({
+        json: {
+          idempotencyKey: crypto.randomUUID(),
+          type: "receipt",
+          contactId: lan.id,
+          amount: 8_000,
+          method: "cash",
+          note: null,
+        },
+      })
+    ).json();
+
+    const foreign = await b.staff.api.payments.$post({
+      json: {
+        idempotencyKey: crypto.randomUUID(),
+        type: "receipt",
+        contactId: lan.id,
+        amount: 1_000,
+        method: "cash",
+        note: null,
+      },
+    });
+    expect((await errorOf(foreign)).code).toBe("INVALID_CONTACT");
+    expect((await b.owner.api.payments[":id"].$get({ param: { id: pt.id } })).status).toBe(404);
+    expect((await b.owner.api.payments[":id"].cancel.$post({ param: { id: pt.id } })).status).toBe(
+      404,
+    );
+    const ledger = await b.staff.api.contacts[":id"]["debt-entries"].$get({
+      param: { id: lan.id },
+      query: {},
+    });
+    expect(ledger.status).toBe(404);
+    const debts = await (await b.staff.api.debts.summary.$get()).json();
+    expect(debts.receivable.amount).toBe(0);
+    expect(debts.collectedThisMonth.amount).toBe(0);
+    const ov = await (await b.owner.api.reports.overview.$get({ query: {} })).json();
+    expect(ov.revenue).toBe(0);
+
+    const mine = await (await a.owner.api.debts.summary.$get()).json();
+    expect(mine.receivable).toEqual({ amount: 30_000, customers: 1 });
+  });
+});

@@ -255,9 +255,10 @@ Phần chưa trả cộng vào `contacts.debt` của nhà cung cấp và ghi deb
 - Cập nhật `contacts.debt_since = NULL` khi debt về 0 (`CASE WHEN debt - ? <= 0 THEN NULL ELSE debt_since END`).
 
 ### Thu nợ / trả nợ NCC (`payments`)
-- receipt: contact phải là customer, `amount <= debt` (không cho thu quá nợ). Batch: counter PT, INSERT payments, UPDATE contacts debt, INSERT debt_entries âm.
+- receipt: contact phải là customer, `amount <= debt` (không cho thu quá nợ). Batch: counter PT, INSERT payments, UPDATE contacts debt có điều kiện `debt - amount >= 0` + câu chặn (hai phiếu thu song song không làm nợ âm), INSERT debt_entries âm.
 - disbursement: tương tự cho supplier, mã PC.
-- Hủy phiếu: đảo lại.
+- Hủy phiếu (owner): UPDATE status có điều kiện `completed` + câu chặn, cộng lại nợ, debt_entries dương (note "Hủy PTxxx").
+- Khách đã trả hết rồi chủ hủy hóa đơn ghi nợ thì nợ có thể âm (khách trả trước, đã duyệt ở giai đoạn 05); khi đó không lập phiếu thu được, hóa đơn ghi nợ sau sẽ trừ vào số trả trước.
 
 ### Kiểm kho (`stock_count`)
 - Tạo phiếu nháp với danh sách hàng (theo nhóm hoặc chọn tay). `system_qty` chụp lại tồn lúc tạo.

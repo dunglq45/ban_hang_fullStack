@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createCategorySchema, updateCategorySchema } from "../../shared/schemas/category";
 import { idParamSchema } from "../../shared/schemas/common";
+import { debtEntriesQuerySchema } from "../../shared/schemas/report";
 import {
   createContactSchema,
   listContactsQuerySchema,
@@ -25,7 +26,8 @@ import {
   listCategories,
   updateCategory,
 } from "../services/categories";
-import { createContact, getContact, listContacts, updateContact } from "../services/contacts";
+import { createContact, listContacts, updateContact } from "../services/contacts";
+import { getContactDetail, listDebtEntries } from "../services/debts";
 import {
   createProduct,
   getImage,
@@ -154,7 +156,16 @@ export const contactRoutes = new Hono<AuthEnv>()
     c.json(await listContacts(c.get("db"), c.req.valid("query"))),
   )
   .get("/:id", validate("param", idParamSchema), async (c) =>
-    c.json(await getContact(c.get("db"), c.req.valid("param").id)),
+    c.json(await getContactDetail(c.get("db"), c.req.valid("param").id)),
+  )
+  .get(
+    "/:id/debt-entries",
+    validate("param", idParamSchema),
+    validate("query", debtEntriesQuerySchema),
+    async (c) => {
+      const { page, pageSize } = c.req.valid("query");
+      return c.json(await listDebtEntries(c.get("db"), c.req.valid("param").id, page, pageSize));
+    },
   )
   .post("/", validate("json", createContactSchema), async (c) =>
     c.json(await createContact(c.get("db"), c.get("user").role, c.req.valid("json")), 201),

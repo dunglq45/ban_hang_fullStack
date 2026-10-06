@@ -11,7 +11,7 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 | 04 API hàng hóa, danh bạ | Xong | /api/categories, /api/products (list/lookup/pos/detail/movements/create/update/import/image), /api/images, /api/contacts; serialize theo role; 125 test |
 | 05 API bán hàng | Xong | POST /api/sales, GET /api/documents(/:id), POST /api/documents/:id/cancel (hóa đơn bán); câu chặn `guardChanges`; 155 test |
 | 06 API nhập hàng, kiểm kho | Xong | /api/purchases (tạo nháp/hoàn thành, sửa nháp, hoàn thành), hủy phiếu nhập, /api/stock-counts (tạo, xem, ghi số, quét, hoàn thành); 183 test |
-| 07 API công nợ, báo cáo | Chưa làm | |
+| 07 API công nợ, báo cáo | Xong | /api/payments (tạo, xem, hủy), /api/contacts/:id/debt-entries, /api/debts/summary, /api/reports/* (overview, revenue-daily, top-products, restock); `shared/period.ts`; seed hoạt động 7 ngày qua bằng service; `docs/BACKEND-STATUS.md`; trang Swagger `/api/docs` (dev); 205 test |
 | 08 Frontend nền tảng | Chưa làm | |
 | 09 Bán hàng (POS) | Chưa làm | |
 | 10 Hàng hóa | Chưa làm | |
@@ -100,6 +100,15 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 - Giai đoạn 06: xem phiếu kiểm `GET /api/stock-counts/:id`: mỗi dòng có `systemQty`, `currentStock`, `stockChanged`, `actualQty`, `diff` (nháp: theo tồn hiện tại; đã hoàn thành: chênh lệch đã ghi), `reason`; `summary` (total, counted, uncounted, matched, increased, decreased). `diffValue`, `increaseValue`, `decreaseValue` chỉ owner. Staff được xem, ghi số, quét; tạo và hoàn thành chỉ owner. Phiếu nhập (/api/purchases) chỉ owner.
 - Giai đoạn 06: test helper `purchaseInput`, `purchase` trong `test/helpers/sales.ts` (dùng `lineAmount`); ca biên ở `test/api/inventory-edge.test.ts`.
 
+- Giai đoạn 07: phiếu thu/chi = MỘT batch: bump PT/PC → INSERT payments → UPDATE contacts có điều kiện `debt + amount >= 0` (option `requireDebt` của `debts.changeStatements`) + câu chặn → debt_entries âm. INSERT payments đứng trước UPDATE nên gửi trùng key song song vấp UNIQUE trước (→ trả phiếu cũ), không vấp câu chặn. Vấp câu chặn → đọc lại nợ → `AMOUNT_EXCEEDS_DEBT` (409, `details { debt, amount }`). Thu từ khách ngừng giao dịch vẫn được.
+- Giai đoạn 07: phiếu chi (disbursement) và hủy phiếu chỉ owner; staff lập phiếu thu, xem phiếu, sổ nợ, tổng sổ nợ (kể cả phải trả NCC, theo quyết định giai đoạn 04). Phiếu không có cột cancelled_by (schema), nên phiếu hủy chỉ có `cancelledAt`.
+- Giai đoạn 07: idempotencyKey kiểm tra chéo: tạo phiếu thu/chi mà key đã thuộc chứng từ → `IDEMPOTENCY_CONFLICT`, và ngược lại (`replayDocument` tra thêm payments). Kiểm tra bằng lượt đọc trước batch (không nguyên tử giữa hai bảng; chỉ xảy ra khi client lỗi). Như chứng từ, replay không so nội dung request.
+- Giai đoạn 07: sổ chi tiết công nợ: diễn giải suy từ chứng từ/phiếu gốc và dấu của dòng (sale +: "Bán hàng, trả thiếu" nếu có trả một phần, "Bán hàng ghi nợ" nếu không; sale −: "Hủy hóa đơn HD…"; purchase tương tự; receipt −: "Thu nợ tiền mặt/chuyển khoản", +: "Hủy phiếu thu PT…"; disbursement: "Trả nợ…", "Hủy phiếu chi…"); không có nguồn thì dùng note ("Nợ cũ chuyển sang"). GET /api/contacts/:id thêm `lastPayment`.
+- Giai đoạn 07: báo cáo: khoảng thời gian `[from, to)` theo giờ VN (`src/shared/period.ts`: `vnDayStart`, `vnDateKey`, `vnMonthStart`, `periodRange`), lọc theo `documents.created_at`. Doanh thu = SUM(sign × total), sign = −1 với sale_return. Giá vốn = SUM(ROUND(base_qty × cost_price / 1000)) theo từng dòng (giá vốn chụp lúc bán). Nhóm theo ngày bằng `(created_at + 25200000) / 86400000` với hằng số ghi thẳng vào SQL (`sql.raw`): tham số bind từ JS là số thực, chia sẽ không còn là chia nguyên. Phải thu ở overview là số dư hiện tại (không theo kỳ). Tham số "now" của service báo cáo dùng cho test ranh giới nửa đêm.
+- Giai đoạn 07: seed: `scripts/seed.ts` nạp dữ liệu nền bằng SQL như trước (nợ đầu kỳ đổi để số dư cuối khớp design), rồi `src/worker/dev/seed-activity.ts` chạy qua `getPlatformProxy` (cùng D1 local trong `.wrangler/state`) gọi CHÍNH các service: 3 phiếu nhập, 40 hóa đơn trong 7 ngày (ngẫu nhiên có hạt giống, không bán hàng "cần nhập" để giữ đúng 5 hàng như design), 3 phiếu thu (540.000) + 1 phiếu chi, 1 phiếu kiểm kho gia vị (lệch −1, +1). Thời điểm từng thao tác bằng cách thay tạm `Date.now`. `tsconfig.node.json` tham chiếu project worker để import service qua .d.ts.
+
+- Sau giai đoạn 07: trang tài liệu API kiểu Swagger `/api/docs` (Swagger UI 5 từ CDN jsDelivr) + `/api/docs/openapi.json` (OpenAPI 3.1). Body/query sinh từ chính schema Zod bằng `z.toJSONSchema(io: "input")`; danh sách endpoint ở `src/worker/dev/openapi.ts`, test đối chiếu với `app.routes`. Chỉ gắn khi `import.meta.env.DEV` (pnpm dev, test); bản build không có (route tạo bằng hàm `docsRoutes()` để tree-shake). Trang tự thêm `X-Requested-With: fetch`; đăng nhập qua `POST /api/auth/login` là cookie tự lưu. App Hono tách sang `src/worker/app.ts` (`index.ts` chỉ còn fetch + scheduled, vẫn re-export `AppType`). Response chưa mô tả schema (chỉ ghi mã thành công + schema lỗi chung).
+
 ## Việc còn nợ
 
 - Người dùng tự chạy `wrangler login`, `wrangler d1 create store-app-db`, `wrangler r2 bucket create store-app-images` rồi thay `database_id` trong `wrangler.jsonc` (đang là UUID toàn số 0).
@@ -114,9 +123,11 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 - Import: nhóm hàng mới được tạo trước khi ghi hàng; nếu mọi dòng của nhóm đó lỗi khi ghi thì còn nhóm rỗng.
 - Seed (`scripts/seed.ts`) vẫn ghi SQL trực tiếp; mã SP theo design (vd. SP000052) cùng bộ đếm SP=127 vẫn đúng với `codeNumber`.
 - Giới hạn truy vấn của D1/Workers: hóa đơn 200 dòng ≈ 604 câu lệnh trong một batch; phiếu nhập 200 dòng ≈ 600; hoàn thành phiếu kiểm 200 dòng ≈ 803; PATCH 200 dòng kiểm kho ≈ 400. Nếu mỗi câu tính một query thì gói Free (~50 query/lần chạy) chỉ bán được ~15 dòng/hóa đơn; gói Paid 1000. Kiểm tra thật khi deploy (giai đoạn 15); nếu cần thì gộp INSERT nhiều dòng.
-- `debt_since` khi hủy mà nợ vẫn còn: giữ ngày bắt đầu nợ cũ (kể cả khi hóa đơn bị hủy là khoản nợ cũ nhất), nên "nợ quá N ngày" có thể dài hơn thực tế. Giai đoạn 07 (báo cáo tuổi nợ) cân nhắc tính lại từ debt_entries.
+- `debt_since` khi hủy/thu một phần mà nợ vẫn còn: giữ ngày bắt đầu nợ cũ (không tính lại theo FIFO từ debt_entries), nên "nợ quá 30 ngày" (Sổ nợ, Tổng quan) có thể dài hơn thực tế khi khách đã trả hết các khoản cũ nhưng còn khoản mới. Giai đoạn 07 giữ nguyên; tính lại FIFO nếu người dùng phản ánh.
 - Staff có thể dò giá vốn qua lỗi `PRICE_BELOW_COST` (hệ quả của quy tắc không bán dưới giá vốn).
-- Giai đoạn 07: idempotencyKey của payments có UNIQUE riêng; quyết định có kiểm tra trùng chéo với documents không.
 - Quét mã kiểm kho chưa chặn trên (cộng mãi có thể vượt MAX_QTY_MILLI); PATCH thì đã chặn bằng Zod.
 - Sổ kho kiểm kho: dòng `adjust` chênh lệch 0 được INSERT rồi DELETE trong cùng batch (sổ kho vẫn chỉ-thêm về mặt kết quả). Có thể đổi sang INSERT … SELECT … WHERE diff <> 0 nếu cần.
+- Seed thay tạm `Date.now` toàn cục trong tiến trình Node (cả lớp proxy của wrangler); chạy ổn, nhưng nếu lỗi lạ thì chuyển sang truyền `now` vào service. Số liệu "đã thu tháng này" của seed chỉ khớp design khi chạy sau ngày 3 của tháng.
+- Kiểu `D1Database` trong chữ ký `seedActivity` không có trong project node (skipLibCheck che đi), nên `scripts/seed.ts` không được kiểm tra kiểu ở chỗ truyền binding.
+- Báo cáo bán chạy: `revenue` là thành tiền dòng (trước chiết khấu hóa đơn), nên tổng có thể lớn hơn doanh thu tổng quan.
 - Nâng `compatibility_date` khi `@cloudflare/vitest-pool-workers` có bản đi kèm workerd mới hơn 2026-08-22.

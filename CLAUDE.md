@@ -23,6 +23,7 @@ Toàn bộ chữ trên giao diện là tiếng Việt.
 
 ## Lệnh thường dùng
 - `pnpm dev`: chạy local tại http://localhost:5173 (Vite + Worker + D1/R2 local, dữ liệu lưu trong `.wrangler/`).
+- Tài liệu API kiểu Swagger (chỉ khi `pnpm dev`): http://localhost:5173/api/docs (spec: `/api/docs/openapi.json`). Bảng endpoint ở `src/worker/dev/openapi.ts`; thêm route mới thì thêm vào bảng (test `test/api/docs.test.ts` báo thiếu).
 - `pnpm build`: build Worker và SPA vào `dist/`. `pnpm preview`: build rồi chạy bản build.
 - `pnpm test`: chạy toàn bộ test một lần (`vitest run`), gồm 2 project: `worker` (test/, chạy trong workerd qua `@cloudflare/vitest-pool-workers`, tự áp dụng migration vào D1 test) và `web` (`src/react-app/**/*.test.tsx`, jsdom). Chạy riêng: `pnpm test --project worker`. Chế độ watch: `pnpm test:watch`.
 - `pnpm typecheck`: `tsc -b` (project references: worker → app, node, test).

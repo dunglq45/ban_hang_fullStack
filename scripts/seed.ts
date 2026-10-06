@@ -3,7 +3,8 @@
 // 32 mặt hàng, 6 khách hàng, 2 nhà cung cấp (tên, giá lấy từ design/*.dc.html).
 // Tồn đầu kỳ ghi qua một phiếu kiểm kho đã hoàn thành và nợ cũ ghi vào debt_entries,
 // để sổ cái kho và sổ cái công nợ khớp với số dư ngay từ đầu.
-// Hóa đơn bán, phiếu nhập mẫu sẽ thêm qua service khi các service đó có (giai đoạn 05–07).
+// Sau đó src/worker/dev/seed-activity.ts tạo hoạt động 7 ngày qua (~40 hóa đơn, 3 phiếu nhập,
+// thu nợ, trả nợ NCC, 1 phiếu kiểm kho) bằng chính các service, qua D1 local của getPlatformProxy.
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -12,6 +13,8 @@ import { toMilli } from "../src/shared/qty";
 import { contactSearchText, productSearchText } from "../src/shared/text";
 import { hashPassword } from "../src/worker/lib/password";
 import { uuidv7 } from "../src/worker/lib/uuid";
+import { type SeedContext, seedActivity } from "../src/worker/dev/seed-activity";
+import { getPlatformProxy } from "wrangler";
 
 const DB_NAME = "store-app-db";
 const PASSWORD = "123456";
@@ -414,10 +417,12 @@ const CUSTOMERS: ContactSeed[] = [
     debtLimit: 2_000_000,
   },
   { name: "Cô Hoa", phone: "0903556120", debt: 650_000, debtDays: 35 },
-  { name: "Bác Bình", phone: "0978203441", debt: 420_000, debtDays: 8 },
-  { name: "Chị Lan", phone: "0912345678", debt: 363_000, debtDays: 20 },
-  { name: "Chú Hải", phone: "0935870019", debt: 215_000, debtDays: 3 },
-  { name: "Anh Minh", phone: "0908765432", debt: 0 },
+  // Nợ đầu kỳ; seed-activity thu bớt/ghi thêm để số dư cuối khớp design (Bác Bình 420.000,
+  // Chị Lan 363.000, Chú Hải 215.000, Anh Minh hết nợ).
+  { name: "Bác Bình", phone: "0978203441", debt: 620_000, debtDays: 8 },
+  { name: "Chị Lan", phone: "0912345678", debt: 540_000, debtDays: 20 },
+  { name: "Chú Hải", phone: "0935870019", debt: 0 },
+  { name: "Anh Minh", phone: "0908765432", debt: 150_000, debtDays: 15 },
 ];
 
 const SUPPLIERS: ContactSeed[] = [
@@ -440,7 +445,7 @@ const SUPPLIERS: ContactSeed[] = [
 // Sinh SQL
 // ---------------------------------------------------------------------------
 
-async function buildSql(): Promise<string> {
+async function buildSql(): Promise<{ sql: string; context: SeedContext }> {
   const now = Date.now();
   const storeId = uuidv7();
 
@@ -474,10 +479,9 @@ async function buildSql(): Promise<string> {
   });
 
   const ownerId = uuidv7();
-  const users = [
-    { id: ownerId, phone: "0900000001", name: "Minh Anh", role: "owner" },
-    { id: uuidv7(), phone: "0900000002", name: "Thu Hằng", role: "staff" },
-  ];
+  const owner = { id: ownerId, phone: "0900000001", name: "Minh Anh", role: "owner" as const };
+  const staff = { id: uuidv7(), phone: "0900000002", name: "Thu Hằng", role: "staff" as const };
+  const users = [owner, staff];
   for (const u of users) {
     insert("users", {
       id: u.id,
@@ -513,10 +517,12 @@ async function buildSql(): Promise<string> {
     completed_at: openingAt,
   });
 
+  const seededProducts: SeedContext["products"] = [];
   for (const p of PRODUCTS) {
     const id = uuidv7();
     const code = formatCode("SP", p.no);
     const stock = toMilli(p.stock);
+    seededProducts.push({ no: p.no, id, unit: p.unit, price: p.price, stock, min: toMilli(p.min) });
     insert("products", {
       id,
       store_id: storeId,
@@ -579,9 +585,11 @@ async function buildSql(): Promise<string> {
     }
   }
 
+  const contactIds = { customer: new Map<string, string>(), supplier: new Map<string, string>() };
   function seedContacts(type: "customer" | "supplier", prefix: string, list: ContactSeed[]) {
     list.forEach((c, i) => {
       const id = uuidv7();
+      contactIds[type].set(c.name, id);
       const code = formatCode(prefix, i + 1);
       const since = c.debt > 0 ? now - (c.debtDays ?? 0) * DAY : null;
       insert("contacts", {
@@ -632,14 +640,25 @@ async function buildSql(): Promise<string> {
     insert("counters", { store_id: storeId, kind, value });
   }
 
-  return statements.join("\n") + "\n";
+  return {
+    sql: statements.join("\n") + "\n",
+    context: {
+      storeId,
+      owner,
+      staff,
+      products: seededProducts,
+      customers: contactIds.customer,
+      suppliers: contactIds.supplier,
+      now,
+    },
+  };
 }
 
 async function main() {
   const codes = new Set(PRODUCTS.map((p) => p.no));
   if (codes.size !== PRODUCTS.length) throw new Error("Trùng mã hàng trong dữ liệu seed");
 
-  const sql = await buildSql();
+  const { sql, context } = await buildSql();
   const dir = resolve(".wrangler", "seed");
   mkdirSync(dir, { recursive: true });
   const file = resolve(dir, "seed.sql");
@@ -656,6 +675,23 @@ async function main() {
     shell: true,
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
+
+  console.log(
+    "Tạo hoạt động 7 ngày qua qua các service (hóa đơn, phiếu nhập, thu nợ, kiểm kho)...",
+  );
+  // Cùng D1 local (.wrangler/state) với `wrangler d1 execute --local` và `pnpm dev`.
+  const proxy = await getPlatformProxy<{ DB: Parameters<typeof seedActivity>[0] }>({
+    configPath: "wrangler.jsonc",
+    persist: true,
+  });
+  try {
+    const done = await seedActivity(proxy.env.DB, context);
+    console.log(
+      `Đã tạo ${done.sales} hóa đơn, ${done.purchases} phiếu nhập, ${done.payments} phiếu thu/chi, ${done.stockCounts} phiếu kiểm kho.`,
+    );
+  } finally {
+    await proxy.dispose();
+  }
 
   console.log(
     `\nXong. Đăng nhập: chủ 0900000001 / ${PASSWORD}, nhân viên 0900000002 / ${PASSWORD}`,

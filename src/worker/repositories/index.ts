@@ -9,7 +9,9 @@ import { categoriesRepository } from "./categories";
 import { contactsRepository } from "./contacts";
 import { debtsRepository } from "./debts";
 import { documentsRepository } from "./documents";
+import { paymentsRepository } from "./payments";
 import { productsRepository } from "./products";
+import { reportsRepository } from "./reports";
 import { stockRepository } from "./stock";
 import { storeRepository } from "./store";
 import { usersRepository } from "./users";
@@ -40,5 +42,7 @@ export function createRepositories(db: Database, storeId: string) {
     stock: stockRepository(db, storeId),
     documents: documentsRepository(db, storeId),
     debts: debtsRepository(db, storeId),
+    payments: paymentsRepository(db, storeId),
+    reports: reportsRepository(db, storeId),
   };
 }

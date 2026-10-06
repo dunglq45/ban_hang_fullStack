@@ -47,8 +47,8 @@ export function containsPattern(q: string): string {
 }
 
 // Điều kiện các tab danh sách (docs/DATABASE.md "Cảnh báo hàng").
-const isLow = sql`(${products.isActive} = 1 AND ${products.minStock} > 0 AND ${products.stock} > 0 AND ${products.stock} <= ${products.minStock})`;
-const isOut = sql`(${products.isActive} = 1 AND ${products.stock} <= 0)`;
+export const isLow = sql`(${products.isActive} = 1 AND ${products.minStock} > 0 AND ${products.stock} > 0 AND ${products.stock} <= ${products.minStock})`;
+export const isOut = sql`(${products.isActive} = 1 AND ${products.stock} <= 0)`;
 const isInactive = sql`(${products.isActive} = 0)`;
 
 const STATUS_COND: Record<ProductStatus, SQL | undefined> = {
