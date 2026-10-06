@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đăng nhập</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1849A9}a:hover{color:#123A87}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 800px; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #101828; background: #F6F7F9; font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums">
+  <main style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; padding: 40px 32px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; background: #FFFFFF">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 34px; height: 34px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700">QL</span>
+      <span style="font-size: 16px; font-weight: 600">[Tên ứng dụng]</span>
+    </div>
+
+    <div style="width: 100%; max-width: 380px; align-self: center; display: flex; flex-direction: column; gap: 22px">
+      <div style="line-height: 1.4">
+        <h1 style="margin: 0 0 6px; font-size: 26px; font-weight: 600">Đăng nhập</h1>
+        <div style="font-size: 15px; color: #5B6474">Quản lý bán hàng, kho và sổ nợ của cửa hàng bạn.</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="sdt" style="font-size: 13px; font-weight: 500; color: #344054">Số điện thoại</label>
+              <input id="sdt" type="text" inputmode="tel" placeholder="Nhập số điện thoại" style="height: 44px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 15px; font-family: inherit; color: #101828; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label for="mat-khau" style="font-size: 13px; font-weight: 500; color: #344054">Mật khẩu</label>
+          <div style="display: flex; align-items: center; height: 44px; border: 1px solid #D0D5DD; border-radius: 8px; padding: 0 4px 0 12px; box-sizing: border-box">
+            <input id="mat-khau" type="password" placeholder="Nhập mật khẩu" style="flex: 1 1 auto; min-width: 0; border: 0; outline: none; font-size: 15px; font-family: inherit; background: transparent">
+            <button style="height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: #475467; font-size: 13px; font-weight: 600; font-family: inherit">Hiện</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input id="ghi-nho" type="checkbox" checked style="width: 18px; height: 18px; accent-color: {{accent}}">
+            <label for="ghi-nho" style="font-size: 14px; color: #344054">Ghi nhớ trên máy này</label>
+          </div>
+          <a href="#quen-mat-khau" style="font-size: 14px; font-weight: 600; color: {{accent}}; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center">Quên mật khẩu?</a>
+        </div>
+        <a href="Main.dc.html" style="height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: {{accent}}; color: #FFFFFF; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; height: 48px; font-size: 15px; text-decoration: none">Đăng nhập</a>
+      </div>
+      <div style="font-size: 14px; color: #475467; text-align: center; padding-top: 16px; border-top: 1px solid #E4E7EC">Chưa có tài khoản? <a href="#dang-ky" style="font-weight: 600; color: {{accent}}; text-decoration: none">Đăng ký cửa hàng mới</a></div>
+    </div>
+
+    <div style="font-size: 13px; color: #5B6474">Cần hỗ trợ? Gọi [SỐ HOTLINE]</div>
+  </main>
+
+  <aside style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; padding: 56px 56px; background: #101828; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; gap: 28px">
+    <h2 style="margin: 0; font-size: 30px; font-weight: 600; line-height: 1.3; max-width: 460px">Bán hàng, nhập kho và ghi nợ trong một chỗ.</h2>
+    <div style="display: flex; flex-direction: column; gap: 16px; max-width: 460px">
+      <div style="display: flex; gap: 12px; align-items: flex-start"><span style="color: #84ADFF; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span style="font-size: 16px; color: #D0D5DD">Tồn kho tự cập nhật sau mỗi đơn bán và phiếu nhập.</span></div>
+      <div style="display: flex; gap: 12px; align-items: flex-start"><span style="color: #84ADFF; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span style="font-size: 16px; color: #D0D5DD">Sổ nợ ghi rõ từng lần mua, từng lần trả của mỗi khách.</span></div>
+      <div style="display: flex; gap: 12px; align-items: flex-start"><span style="color: #84ADFF; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span style="font-size: 16px; color: #D0D5DD">Dùng trên máy tính, máy tính bảng và điện thoại.</span></div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1849A9","options":["#1849A9","#0E7C66","#344054","#B93815"]},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#1849A9';
+    return { accent, accentTint: accent + '14' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+# CLAUDE.md – Ứng dụng quản lý cửa hàng bán lẻ
+
+## Sản phẩm
+Web app SaaS cho cửa hàng bán lẻ nhỏ ở Việt Nam (tạp hóa, VLXD, quần áo, nhà thuốc…).
+Chức năng MVP: bán hàng (POS), hàng hóa và tồn kho, nhập hàng, kiểm kho, sổ nợ khách hàng và nhà cung cấp, báo cáo tổng quan.
+Người dùng không rành công nghệ, nên giao diện phải rõ ràng, ít bước, dùng từ ngữ đời thường.
+Toàn bộ chữ trên giao diện là tiếng Việt.
+
+## Tài liệu bắt buộc đọc trước khi code
+- `docs/ARCHITECTURE.md`: kiến trúc, cấu trúc thư mục, quy ước.
+- `docs/DATABASE.md`: schema D1 và các quy tắc nghiệp vụ (tồn kho, giá vốn, công nợ).
+- `docs/API.md`: danh sách endpoint.
+- `design/*.dc.html`: thiết kế giao diện tham chiếu (xem mục "Thiết kế" bên dưới).
+
+## Stack
+- Cloudflare Workers + Hono (API, chạy dưới `/api/*`).
+- Cloudflare D1 (SQLite) + Drizzle ORM + drizzle-kit migrations.
+- R2 cho ảnh hàng hóa.
+- React + Vite + TypeScript (strict), dùng chung một Worker qua `@cloudflare/vite-plugin` (Worker phục vụ cả API lẫn static assets của SPA).
+- React Router, TanStack Query, react-hook-form, Zod, Tailwind CSS.
+- Kiểm thử: Vitest + `@cloudflare/vitest-pool-workers` cho API; Vitest + Testing Library cho frontend.
+- Quản lý gói: pnpm.
+
+## Lệnh thường dùng
+(Cập nhật mục này sau khi scaffold xong.)
+- `pnpm dev`: chạy local (Vite + Worker + D1 local).
+- `pnpm test`: chạy toàn bộ test.
+- `pnpm typecheck`, `pnpm lint`.
+- `pnpm db:generate`: sinh migration từ schema Drizzle.
+- `pnpm db:migrate:local`, `pnpm db:migrate:remote`.
+- `pnpm deploy`.
+
+## Quy tắc bất di bất dịch
+1. **Đa cửa hàng (multi-tenant):** mọi bảng nghiệp vụ có `store_id`. `store_id` luôn lấy từ session trên server, KHÔNG BAO GIỜ nhận từ request body/query. Mọi query phải lọc theo `store_id`; dùng các hàm repository có sẵn tham số `storeId`, không viết query trần ở route.
+2. **Tiền** là số nguyên VND (INTEGER). Không dùng số thực cho tiền.
+3. **Số lượng** lưu dạng số nguyên "milli" (×1000) của đơn vị tính. 1,5 kg = 1500. Dùng helper trong `src/shared/qty.ts`; không tự nhân chia rải rác.
+4. **Chứng từ đã hoàn thành không được sửa hay xóa.** Muốn sửa thì hủy (sinh bút toán đảo) rồi tạo chứng từ mới.
+5. **Mọi thao tác ghi gồm nhiều bảng phải nằm trong MỘT `db.batch()`**. D1 không có interactive transaction; batch là đơn vị nguyên tử. Không đọc-rồi-ghi qua nhiều lượt gọi cho tồn kho hay công nợ; dùng `UPDATE ... SET x = x + ?` và subquery.
+6. **Idempotency:** mọi request tạo chứng từ hoặc phiếu thu/chi có `idempotencyKey` (UUIDv7 do client sinh). Trùng key thì trả lại kết quả cũ, không ghi lần hai.
+7. **ID** là UUIDv7 dạng TEXT. Thời gian lưu dạng INTEGER (epoch milliseconds).
+8. **Phân quyền:** `owner` thấy mọi thứ. `staff` chỉ bán hàng, xem hàng hóa, thu nợ; API phải loại bỏ giá vốn, lợi nhuận và báo cáo khỏi response của staff.
+9. Validate mọi input bằng Zod (schema đặt trong `src/shared/schemas`, dùng chung cho client và server).
+
+## Quy ước code
+- TypeScript strict, không dùng `any`.
+- Logic nghiệp vụ nằm ở `src/worker/services/*`, route chỉ parse input, gọi service và trả output.
+- Lỗi nghiệp vụ ném `AppError(code, message, status)`; middleware chuyển thành JSON `{ error: { code, message } }`. Message hiển thị cho người dùng viết bằng tiếng Việt.
+- Viết test cho mọi service có ghi dữ liệu (bán, nhập, hủy, thu nợ, kiểm kho) TRƯỚC khi làm giao diện tương ứng.
+- Mỗi giai đoạn xong: chạy `pnpm typecheck && pnpm test`, sửa hết lỗi rồi mới báo hoàn thành.
+- Commit nhỏ, message rõ ràng (tiếng Anh, conventional commits).
+
+## Thiết kế
+- Các file `design/*.dc.html` là mockup xuất từ công cụ thiết kế. Chúng chứa cú pháp template riêng (`<x-dc>`, `<sc-for>`, `{{...}}`, class `DCLogic`), KHÔNG copy nguyên văn. Chỉ đọc để lấy bố cục, khoảng cách, màu, cỡ chữ, nội dung chữ và dữ liệu mẫu.
+- Tương ứng màn hình ↔ file:
+  - Bán hàng: `Main.dc.html`
+  - Danh sách hàng hóa: `HangHoa.dc.html`
+  - Thêm/sửa hàng: `ThemHang.dc.html`
+  - Chi tiết hàng hóa: `ChiTietHang.dc.html`
+  - Nhập hàng: `NhapHang.dc.html`
+  - Kiểm kho: `KiemKho.dc.html`
+  - Sổ nợ: `SoNo.dc.html`
+  - Hộp thoại thu nợ: `ThuNo.dc.html`
+  - Tổng quan: `TongQuan.dc.html`
+  - Đăng nhập: `DangNhap.dc.html`
+  - Bán hàng và thanh toán trên điện thoại: `BanHangMobile.dc.html`, `ThanhToanMobile.dc.html`
+  - Hóa đơn in 80mm: `HoaDon.dc.html`
+- Design tokens:
+  - Màu chữ `#101828`, chữ phụ `#5B6474`, chữ thân `#344054`/`#475467`.
+  - Viền `#E4E7EC`, viền input `#D0D5DD`.
+  - Nền trang `#F6F7F9`, nền header bảng `#F9FAFB`.
+  - Màu chính `#1849A9` (nền nhạt: màu chính với alpha 8%).
+  - Màu nợ và sắp hết `#B54708` (chấm `#F79009`), hết hàng `#B42318` (chấm `#F04438`), tăng hoặc đã trả `#067647` (chấm `#12B76A`).
+  - Bo góc: 6px (nút nhỏ), 8px (input, nút), 10px (card).
+  - Font: Be Vietnam Pro; số dùng `font-variant-numeric: tabular-nums`, căn phải trong bảng.
+  - Vùng bấm tối thiểu 44px.
+
+## Tự động hóa (thư mục .claude/)
+- Hook `guard.sh` chặn lệnh `--remote`, `db:migrate:remote`, `pnpm deploy`, `wrangler deploy|delete`, `rm -rf`, `push --force`. Không tìm cách né hook; hãy yêu cầu người dùng tự chạy lệnh đó.
+- Hook `format.sh` tự chạy prettier cho file vừa sửa; hook `verify.sh` chạy `pnpm typecheck` và `pnpm test` khi kết thúc lượt nếu có thay đổi chưa commit.
+- Script `test` trong package.json phải chạy một lần rồi thoát (ví dụ `vitest run`), không dùng chế độ watch.
+- Subagent `reviewer` dùng để rà diff trước khi commit; lệnh `/phase NN` chạy một giai đoạn trong `prompts/`.
+- Cập nhật `docs/PROGRESS.md` sau mỗi giai đoạn.

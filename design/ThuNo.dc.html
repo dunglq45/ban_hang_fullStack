@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thu nợ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1849A9}a:hover{color:#123A87}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 820px; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #101828; background: #F6F7F9; font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums">
+  <div style="position: absolute; inset: 0; background: rgba(16, 24, 40, 0.5); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">
+    <div role="dialog" aria-modal="true" aria-labelledby="tn-title" style="width: 100%; max-width: 520px; background: #FFFFFF; border-radius: 12px; box-shadow: 0 20px 40px rgba(16, 24, 40, 0.18); display: flex; flex-direction: column">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid #E4E7EC">
+        <div style="line-height: 1.35">
+          <h2 id="tn-title" style="margin: 0; font-size: 18px; font-weight: 600">Thu nợ</h2>
+          <div style="font-size: 13px; color: #5B6474">Chị Lan · 0912 345 678</div>
+        </div>
+        <button aria-label="Đóng" style="width: 44px; height: 44px; margin: -8px -10px 0 0; border: 0; background: transparent; color: #5B6474; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+      </div>
+
+      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; border: 1px solid #E4E7EC; border-radius: 8px; background: #F9FAFB">
+          <span style="font-size: 14px; color: #475467">Dư nợ hiện tại</span>
+          <span style="font-size: 20px; font-weight: 700; color: #B54708">363.000</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="so-tien-thu" style="font-size: 13px; font-weight: 500; color: #344054">Số tiền thu<span style="color: #B42318"> *</span></label>
+          <input id="so-tien-thu" type="text" inputmode="numeric" value="363.000" style="height: 44px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 15px; font-family: inherit; color: #101828; background: #FFFFFF; box-sizing: border-box; width: 100%; height: 52px; font-size: 22px; font-weight: 700; text-align: right">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <button aria-pressed="true" style="height: 40px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-size: 13px; font-weight: 500; font-family: inherit; color: #344054; border-color: {{accent}}; background: {{accentTint}}; color: {{accent}}; font-weight: 600">Thu hết nợ</button>
+            <button aria-pressed="false" style="height: 40px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-size: 13px; font-weight: 500; font-family: inherit; color: #344054">200.000</button>
+            <button aria-pressed="false" style="height: 40px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-size: 13px; font-weight: 500; font-family: inherit; color: #344054">100.000</button>
+            <button aria-pressed="false" style="height: 40px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 6px; background: #FFFFFF; font-size: 13px; font-weight: 500; font-family: inherit; color: #344054">50.000</button>
+          </div>
+        </div>
+
+        <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+          <legend style="font-size: 13px; font-weight: 500; color: #344054; padding: 0; margin-bottom: 8px">Hình thức</legend>
+          <div style="display: flex; gap: 8px">
+            <label style="flex: 1 1 0; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid {{accent}}; border-radius: 8px; background: {{accentTint}}; font-size: 14px; font-weight: 600; cursor: pointer"><input type="radio" name="hinh-thuc" checked style="width: 18px; height: 18px; margin: 0; accent-color: {{accent}}">Tiền mặt</label>
+            <label style="flex: 1 1 0; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; font-size: 14px; font-weight: 500; cursor: pointer"><input type="radio" name="hinh-thuc" style="width: 18px; height: 18px; margin: 0">Chuyển khoản</label>
+          </div>
+        </fieldset>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="ngay-thu" style="font-size: 13px; font-weight: 500; color: #344054">Ngày thu</label>
+              <input id="ngay-thu" type="text" value="05/10/2026" placeholder="" style="height: 44px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 15px; font-family: inherit; color: #101828; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="ma-phieu-thu" style="font-size: 13px; font-weight: 500; color: #344054">Mã phiếu thu</label>
+              <input id="ma-phieu-thu" type="text" placeholder="PT000045" style="height: 44px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 15px; font-family: inherit; color: #101828; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <label for="ghi-chu-thu" style="font-size: 13px; font-weight: 500; color: #344054">Ghi chú</label>
+              <input id="ghi-chu-thu" type="text" placeholder="Ví dụ: con gái chị Lan mang tiền qua" style="height: 44px; padding: 0 12px; border: 1px solid #D0D5DD; border-radius: 8px; font-size: 15px; font-family: inherit; color: #101828; background: #FFFFFF; box-sizing: border-box; width: 100%">
+            </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; border-top: 1px solid #E4E7EC">
+          <span style="font-size: 14px; color: #475467">Dư nợ sau khi thu</span>
+          <span style="font-size: 16px; font-weight: 700; color: #067647">0 · Hết nợ</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #E4E7EC; background: #F9FAFB; border-radius: 0 0 12px 12px">
+        <div style="display: flex; align-items: center; gap: 8px; margin-right: auto">
+          <input id="in-phieu-thu" type="checkbox" style="width: 18px; height: 18px; accent-color: {{accent}}">
+          <label for="in-phieu-thu" style="font-size: 14px; color: #344054">In phiếu thu</label>
+        </div>
+        <button style="height: 44px; padding: 0 14px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; color: #344054; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box">Hủy</button>
+        <button style="height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: {{accent}}; color: #FFFFFF; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box">Xác nhận thu 363.000</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1849A9","options":["#1849A9","#0E7C66","#344054","#B93815"]},"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#1849A9';
+    return { accent, accentTint: accent + '14' };
+  }
+}
+</script>
+</body>
+</html>

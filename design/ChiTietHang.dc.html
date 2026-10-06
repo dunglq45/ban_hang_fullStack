@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chi tiết hàng hóa</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1849A9}a:hover{color:#123A87}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1000px; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #101828; background: #F6F7F9; font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums">
+<nav aria-label="Menu chính" style="flex: 1 1 232px; box-sizing: border-box; background: #FFFFFF; border-right: 1px solid #E4E7EC; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 18px">
+    <button style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 10px; border: 1px solid #E4E7EC; border-radius: 8px; background: #FFFFFF; font-family: inherit; text-align: left; cursor: pointer">
+      <span style="width: 30px; height: 30px; border-radius: 6px; background: {{accent}}; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">MA</span>
+      <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+        <span style="font-size: 14px; font-weight: 600; color: #101828">Tạp hóa Minh Anh</span>
+        <span style="font-size: 12px; color: #5B6474">Cửa hàng chính</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6474" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4"></path><path d="M16 15l-4 4-4-4"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-size: 12px; font-weight: 600; color: #5B6474; padding: 0 10px 6px">Vận hành</div>
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 6px; color: #344054; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"></path><circle cx="10" cy="20" r="1.5"></circle><circle cx="17" cy="20" r="1.5"></circle></svg>Bán hàng</a>
+      <a href="HangHoa.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 6px; background: {{accentTint}}; color: {{accent}}; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg>Hàng hóa</a>
+      <a href="SoNo.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 6px; color: #344054; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"></path><path d="M9 9h6"></path><path d="M9 13h4"></path></svg>Sổ nợ<span style="margin-left: auto; font-size: 12px; font-weight: 600; color: #344054; background: #F2F4F7; border-radius: 999px; padding: 1px 8px">14</span></a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-size: 12px; font-weight: 600; color: #5B6474; padding: 0 10px 6px">Báo cáo</div>
+      <a href="TongQuan.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 6px; color: #344054; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11"></path><path d="M10 20V5"></path><path d="M16 20v-6"></path><path d="M2 20h20"></path></svg>Tổng quan</a>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #E4E7EC; padding-top: 12px">
+      <a href="#cai-dat" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 6px; color: #344054; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9"></path><path d="M17 6h3"></path><circle cx="15" cy="6" r="2"></circle><path d="M4 12h3"></path><path d="M11 12h9"></path><circle cx="9" cy="12" r="2"></circle><path d="M4 18h11"></path><path d="M19 18h1"></path><circle cx="17" cy="18" r="2"></circle></svg>Cài đặt</a>
+    </div>
+  </nav>
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 10px 28px; box-sizing: border-box; background: #FFFFFF; border-bottom: 1px solid #E4E7EC">
+      <div style="display: flex; flex-direction: column; line-height: 1.3">
+        <span style="font-size: 13px; color: #5B6474">Hàng hóa</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 600">Chi tiết hàng hóa</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">
+        <span style="font-size: 14px; color: #5B6474">Thứ Hai, 05/10/2026</span>
+        <button aria-label="Thông báo" style="width: 44px; height: 44px; border: 1px solid #E4E7EC; border-radius: 8px; background: #FFFFFF; color: #344054; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></button>
+        <span style="width: 36px; height: 36px; border-radius: 999px; background: #101828; color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center">MA</span>
+      </div>
+    </header>
+    <main style="flex: 1 1 auto; box-sizing: border-box; padding: 20px 28px 32px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <a href="HangHoa.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font-size: 14px; font-weight: 500; color: #344054; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>Hàng hóa</a>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <h2 style="margin: 0; font-size: 22px; font-weight: 600">Nước mắm 500ml</h2>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #B54708"><span style="width: 8px; height: 8px; border-radius: 999px; background: #F79009; flex-shrink: 0"></span>Sắp hết</span>
+          </div>
+          <div style="font-size: 13px; color: #5B6474">SP0052 · Gia vị · Mã vạch 8934567890123 · Đơn vị: Chai, Thùng (12 chai)</div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button style="height: 44px; padding: 0 14px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; color: #344054; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box">Ngừng bán</button>
+          <a href="ThemHang.dc.html" style="height: 44px; padding: 0 14px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; color: #344054; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; text-decoration: none">Sửa thông tin</a>
+          <a href="NhapHang.dc.html" style="height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: {{accent}}; color: #FFFFFF; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; text-decoration: none">Nhập thêm hàng</a>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px; background: #E4E7EC; border: 1px solid #E4E7EC; border-radius: 10px; overflow: hidden">
+          <div style="background: #FFFFFF; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 13px; color: #5B6474">Tồn kho</span>
+            <span style="font-size: 22px; font-weight: 600; color: #B54708">2 chai</span>
+            <span style="font-size: 13px; color: #B54708">Cảnh báo dưới 6 chai</span>
+          </div><div style="background: #FFFFFF; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 13px; color: #5B6474">Giá vốn bình quân</span>
+            <span style="font-size: 22px; font-weight: 600; color: #101828">31.000</span>
+            <span style="font-size: 13px; color: #5B6474">Cập nhật 28/09 theo PN000055</span>
+          </div><div style="background: #FFFFFF; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 13px; color: #5B6474">Giá bán</span>
+            <span style="font-size: 22px; font-weight: 600; color: #101828">38.000</span>
+            <span style="font-size: 13px; color: #5B6474">Lãi 7.000 / chai · 18,4%</span>
+          </div><div style="background: #FFFFFF; padding: 16px 20px; display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 13px; color: #5B6474">Đã bán 30 ngày</span>
+            <span style="font-size: 22px; font-weight: 600; color: #101828">64 chai</span>
+            <span style="font-size: 13px; color: #5B6474">Trung bình ~2 chai / ngày</span>
+          </div>
+        </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 10px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid #E4E7EC">
+          <div style="display: flex; gap: 24px; overflow-x: auto">
+            <button aria-pressed="true" style="height: 48px; padding: 0 2px; border: 0; border-bottom: 2px solid {{accent}}; background: transparent; color: #101828; font-size: 14px; font-weight: 600; font-family: inherit; white-space: nowrap; display: flex; align-items: center; gap: 8px">Lịch sử kho</button>
+            <button aria-pressed="false" style="height: 48px; padding: 0 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #5B6474; font-size: 14px; font-weight: 500; font-family: inherit; white-space: nowrap; display: flex; align-items: center; gap: 8px">Đơn vị và giá</button>
+            <button aria-pressed="false" style="height: 48px; padding: 0 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #5B6474; font-size: 14px; font-weight: 500; font-family: inherit; white-space: nowrap; display: flex; align-items: center; gap: 8px">Thông tin khác</button>
+          </div>
+          <div style="display: flex; gap: 8px; padding: 8px 0">
+            <button style="height: 44px; padding: 0 14px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; color: #344054; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; height: 40px; font-weight: 500">Loại: Tất cả<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+            <button style="height: 44px; padding: 0 14px; border: 1px solid #D0D5DD; border-radius: 8px; background: #FFFFFF; color: #344054; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; height: 40px; font-weight: 500">30 ngày qua<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+          </div>
+        </div>
+        <div style="overflow-x: auto">
+          <div style="min-width: 820px">
+            <div style="display: grid; grid-template-columns: 120px 120px 110px minmax(150px, 1.4fr) 100px 90px 100px; gap: 12px; align-items: center; min-height: 40px; padding: 0 16px; background: #F9FAFB; border-bottom: 1px solid #E4E7EC; font-size: 13px; font-weight: 600; color: #475467">
+              <div>Thời gian</div><div>Loại</div><div>Chứng từ</div><div>Đối tác / ghi chú</div><div style="text-align: right">Thay đổi</div><div style="text-align: right">Tồn sau</div><div style="text-align: right">Giá vốn</div>
+            </div>
+            <sc-for list="{{moves}}" as="m" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: 120px 120px 110px minmax(150px, 1.4fr) 100px 90px 100px; gap: 12px; align-items: center; min-height: 52px; padding: 0 16px; border-bottom: 1px solid #F2F4F7; font-size: 14px">
+                <div style="color: #475467">{{m.time}}</div>
+                <div><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #344054"><span style="width: 8px; height: 8px; border-radius: 999px; background: {{m.dot}}"></span>{{m.type}}</span></div>
+                <div><a href="#{{m.doc}}" style="font-weight: 500; color: {{accent}}; text-decoration: none">{{m.doc}}</a></div>
+                <div style="color: #344054">{{m.who}}</div>
+                <sc-if value="{{m.isIn}}" hint-placeholder-val="{{false}}"><div style="text-align: right; font-weight: 600; color: #067647">{{m.change}}</div></sc-if>
+                <sc-if value="{{m.isOut}}" hint-placeholder-val="{{true}}"><div style="text-align: right; font-weight: 600">{{m.change}}</div></sc-if>
+                <div style="text-align: right; font-weight: 600">{{m.after}}</div>
+                <div style="text-align: right; color: #475467">{{m.cost}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 12px 16px; font-size: 13px; color: #5B6474">Tồn kho đầu kỳ (05/09): 0 chai · Nhập +12 · Xuất −9 · Điều chỉnh −1 · Tồn cuối kỳ: 2 chai</div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1849A9","options":["#1849A9","#0E7C66","#344054","#B93815"]},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#1849A9';
+    return { accent, accentTint: accent + '14',
+      moves: [
+        { time: '05/10 09:12', type: 'Bán hàng', dot: '#98A2B3', doc: 'HD000229', who: 'Khách lẻ', change: '−1', after: '2', cost: '31.000', isIn: false },
+        { time: '04/10 17:40', type: 'Bán hàng', dot: '#98A2B3', doc: 'HD000221', who: 'Cô Hoa', change: '−3', after: '3', cost: '31.000', isIn: false },
+        { time: '03/10 08:05', type: 'Kiểm kho', dot: '#F79009', doc: 'KK000012', who: 'Vỡ 1 chai khi xếp kệ', change: '−1', after: '6', cost: '31.000', isIn: false },
+        { time: '02/10 16:20', type: 'Bán hàng', dot: '#98A2B3', doc: 'HD000203', who: 'Anh Tuấn (thợ hồ)', change: '−5', after: '7', cost: '31.000', isIn: false },
+        { time: '28/09 10:00', type: 'Nhập hàng', dot: '#12B76A', doc: 'PN000055', who: 'Đại lý Hưng Thịnh', change: '+12', after: '12', cost: '31.000', isIn: true },
+        { time: '26/09 18:45', type: 'Bán hàng', dot: '#98A2B3', doc: 'HD000180', who: 'Khách lẻ', change: '−2', after: '0', cost: '30.500', isIn: false }
+      ].map((m) => ({ ...m, isOut: !m.isIn })) };
+  }
+}
+</script>
+</body>
+</html>

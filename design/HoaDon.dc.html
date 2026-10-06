@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hóa đơn in khổ 80mm</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1849A9}a:hover{color:#123A87}
+</style>
+</helmet>
+<div style="width: 302px; height: 760px; box-sizing: border-box; padding: 20px 16px; background: #FFFFFF; color: #000000; font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 12px; line-height: 1.45; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: 10px">
+  <div style="text-align: center; display: flex; flex-direction: column; gap: 2px">
+    <div style="font-size: 15px; font-weight: 700">TẠP HÓA MINH ANH</div>
+    <div>[ĐỊA CHỈ CỬA HÀNG]</div>
+    <div>ĐT: [SỐ ĐIỆN THOẠI]</div>
+  </div>
+  <div style="border-top: 1px dashed #000000"></div>
+  <div style="text-align: center; font-size: 14px; font-weight: 700">HÓA ĐƠN BÁN HÀNG</div>
+  <div style="display: flex; flex-direction: column; gap: 1px">
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Số: HD000231</span><span>05/10/2026 09:24</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Thu ngân: Minh Anh</span><span></span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Khách hàng: Chị Lan</span><span></span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>SĐT: 0912 345 678</span><span></span></div>
+  </div>
+  <div style="border-top: 1px dashed #000000"></div>
+  <div style="display: flex; justify-content: space-between; font-weight: 700"><span>Mặt hàng</span><span>Thành tiền</span></div>
+  <sc-for list="{{lines}}" as="l" hint-placeholder-count="3">
+    <div style="display: flex; flex-direction: column">
+      <div>{{l.name}}</div>
+      <div style="display: flex; justify-content: space-between"><span>{{l.qty}} x {{l.price}}</span><span style="font-weight: 600">{{l.total}}</span></div>
+    </div>
+  </sc-for>
+  <div style="border-top: 1px dashed #000000"></div>
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Tổng tiền hàng</span><span>113.000</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Giảm giá</span><span>0</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px; align-items: baseline; padding: 2px 0"><span><span style="font-size: 14px; font-weight: 700">KHÁCH CẦN TRẢ</span></span><span><span style="font-size: 14px; font-weight: 700">113.000</span></span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Khách thanh toán (tiền mặt)</span><span>100.000</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span><span style="font-weight: 700">Ghi nợ đơn này</span></span><span><span style="font-weight: 700">13.000</span></span></div>
+    <div style="display: flex; justify-content: space-between; gap: 8px"><span>Tổng nợ hiện tại</span><span>363.000</span></div>
+  </div>
+  <div style="border-top: 1px dashed #000000"></div>
+  <div style="text-align: center; display: flex; flex-direction: column; gap: 2px">
+    <div style="font-weight: 600">Cảm ơn quý khách, hẹn gặp lại!</div>
+    <div>[CHÍNH SÁCH ĐỔI TRẢ]</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1849A9","options":["#1849A9","#0E7C66","#344054","#B93815"]},"$preview":{"width":302,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#1849A9';
+    return { accent, accentTint: accent + '14',
+      lines: [
+        { name: 'Mì gói tôm chua cay', qty: 10, price: '4.500', total: '45.000' },
+        { name: 'Sữa tươi hộp 180ml', qty: 2, price: '8.000', total: '16.000' },
+        { name: 'Dầu ăn 1 lít', qty: 1, price: '52.000', total: '52.000' }
+      ] };
+  }
+}
+</script>
+</body>
+</html>
