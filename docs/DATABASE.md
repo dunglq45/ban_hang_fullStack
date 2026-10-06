@@ -265,7 +265,9 @@ Phần chưa trả cộng vào `contacts.debt` của nhà cung cấp và ghi deb
 - Dòng lệch ≠ 0 bắt buộc có reason.
 
 ### Tìm kiếm
-`name_search` = `toSearch(name + ' ' + code + ' ' + (barcode ?? ''))` với toSearch: lowercase, bỏ dấu, đ→d, gộp khoảng trắng. Query: `name_search LIKE '%' || ? || '%'` với q đã toSearch. Tra mã vạch: khớp chính xác products.barcode hoặc product_units.barcode (trả về luôn đơn vị).
+`name_search` = `toSearch(name + ' ' + code + ' ' + (barcode ?? ''))` với toSearch: lowercase, bỏ dấu, đ→d, gộp khoảng trắng.
+Với `contacts`: `toSearch(name + ' ' + code + ' ' + (phone ?? ''))`. Dùng `productSearchText` / `contactSearchText` trong `src/shared/text.ts`, không tự ghép chuỗi.
+Query: `name_search LIKE '%' || ? || '%'` với q đã toSearch. Tra mã vạch: khớp chính xác products.barcode hoặc product_units.barcode (trả về luôn đơn vị).
 
 ### Cảnh báo hàng
 - Sắp hết: `stock > 0 AND stock <= min_stock` (min_stock > 0).

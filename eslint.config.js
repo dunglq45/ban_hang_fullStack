@@ -28,7 +28,29 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ["*.config.{ts,js}"],
+    // Quy tắc 1: route và service chỉ truy cập DB qua getDb(env, storeId), không dùng Drizzle thô.
+    files: ["src/worker/routes/**/*.ts", "src/worker/services/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/db/client"],
+              importNames: ["createDatabase"],
+              message: "Dùng getDb(env, storeId) để mọi truy vấn được lọc theo cửa hàng.",
+            },
+            {
+              group: ["drizzle-orm/d1"],
+              message: "Dùng getDb(env, storeId) để mọi truy vấn được lọc theo cửa hàng.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["*.config.{ts,js}", "scripts/**/*.ts"],
     languageOptions: { globals: globals.node },
   },
 ]);
