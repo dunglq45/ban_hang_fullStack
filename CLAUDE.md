@@ -29,6 +29,7 @@ Toàn bộ chữ trên giao diện là tiếng Việt.
 - `pnpm lint`, `pnpm format` (prettier, bỏ qua `docs/`, `prompts/`, `design/`).
 - `pnpm db:generate`: sinh SQL migration vào `migrations/` từ `src/worker/db/schema.ts`.
 - `pnpm db:migrate:local`: áp dụng migration vào D1 local. Chạy lại sau mỗi lần `db:generate`.
+- `pnpm db:seed:local`: XÓA SẠCH D1 local rồi nạp dữ liệu mẫu "Tạp hóa Minh Anh". Tài khoản: chủ `0900000001`, nhân viên `0900000002`, mật khẩu `123456`.
 - `pnpm db:migrate:remote`, `pnpm deploy`: chỉ người dùng tự chạy (hook chặn).
 - `pnpm cf-typegen`: sinh lại `worker-configuration.d.ts` (type `Env` + runtime). Chạy sau khi sửa `wrangler.jsonc`.
 
