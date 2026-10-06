@@ -60,6 +60,18 @@ export function formatLongDate(ms: number): string {
   return `${weekday}, ${formatDate(ms)}`;
 }
 
+/** SĐT dễ đọc: "0912345678" → "0912 345 678"; số khác độ dài giữ nguyên. */
+export function formatPhone(phone: string): string {
+  return /^\d{10}$/.test(phone)
+    ? `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`
+    : phone;
+}
+
+/** Tên khách/NCC kèm SĐT: "Chị Lan · 0912 345 678". */
+export function contactLabel(c: { name: string; phone: string | null }): string {
+  return c.phone ? `${c.name} · ${formatPhone(c.phone)}` : c.name;
+}
+
 /** Chữ viết tắt cho avatar: "Tạp hóa Minh Anh" → "MA", "Lan" → "LA". */
 export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

@@ -5,6 +5,7 @@ import {
   formatLongDate,
   formatMoney,
   formatQty,
+  formatPhone,
   initials,
 } from "./format";
 
@@ -28,6 +29,11 @@ describe("format", () => {
     expect(formatLongDate(Date.UTC(2026, 9, 5, 3))).toBe("Thứ Hai, 05/10/2026");
     expect(formatLongDate(AFTER_MIDNIGHT_VN)).toBe("Thứ Ba, 06/10/2026");
     expect(formatLongDate(Date.UTC(2026, 9, 4, 3))).toBe("Chủ nhật, 04/10/2026");
+  });
+
+  it("số điện thoại dễ đọc", () => {
+    expect(formatPhone("0912345678")).toBe("0912 345 678");
+    expect(formatPhone("02838123456")).toBe("02838123456");
   });
 
   it("chữ viết tắt avatar", () => {

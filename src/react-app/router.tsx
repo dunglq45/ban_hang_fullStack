@@ -4,11 +4,17 @@ import { GuestOnly, HOME_PATH, RequireAuth, RequireOwner } from "./features/auth
 import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
 import { NotFoundPage, PlaceholderPage } from "./features/placeholder/PlaceholderPage";
+import { MobileCheckoutPage } from "./features/pos/MobileCheckoutPage";
+import { PosPage } from "./features/pos/PosPage";
+import { PosProvider } from "./features/pos/PosProvider";
 import type { PageMeta } from "./lib/page-meta";
 
+function meta(section: string, title: string): PageMeta {
+  return { section, title };
+}
+
 function page(path: string, section: string, title: string): RouteObject {
-  const handle: PageMeta = { section, title };
-  return { path, handle, element: <PlaceholderPage /> };
+  return { path, handle: meta(section, title), element: <PlaceholderPage /> };
 }
 
 export const routes: RouteObject[] = [
@@ -28,7 +34,18 @@ export const routes: RouteObject[] = [
         element: <AppShell />,
         children: [
           { path: "/", element: <Navigate to={HOME_PATH} replace /> },
-          page("/ban-hang", "Vận hành", "Bán hàng"),
+          {
+            path: "/ban-hang",
+            element: <PosProvider />,
+            children: [
+              { index: true, handle: meta("Vận hành", "Bán hàng"), element: <PosPage /> },
+              {
+                path: "thanh-toan",
+                handle: meta("Bán hàng", "Thanh toán"),
+                element: <MobileCheckoutPage />,
+              },
+            ],
+          },
           page("/hang-hoa", "Vận hành", "Hàng hóa"),
           page("/hang-hoa/moi", "Hàng hóa", "Thêm hàng hóa"),
           page("/hang-hoa/:id", "Hàng hóa", "Chi tiết hàng hóa"),

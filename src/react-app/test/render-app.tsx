@@ -6,7 +6,10 @@ import { createQueryClient } from "../api/query-client";
 import { ToastProvider } from "../components/ui/Toast";
 import { routes } from "../router";
 
-export type MockHandler = (req: { body: unknown; init?: RequestInit }) => Response;
+export type MockHandler = (req: {
+  body: unknown;
+  init?: RequestInit;
+}) => Response | Promise<Response>;
 
 /**
  * fetch giả: khóa là "METHOD /đường-dẫn" (bỏ query string). Đường dẫn chưa khai báo trả 404.

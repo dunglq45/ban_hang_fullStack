@@ -45,3 +45,11 @@ export const listContactsQuerySchema = paginationSchema.extend({
 export type CreateContactInput = z.input<typeof createContactSchema>;
 export type UpdateContactInput = z.input<typeof updateContactSchema>;
 export type ContactSort = (typeof CONTACT_SORTS)[number];
+
+/** Tạo nhanh khách hàng ở màn Bán hàng: chỉ tên và SĐT. */
+export const quickCustomerSchema = z.object({
+  name: requiredText("tên khách", 200),
+  phone: optionalPhone(),
+});
+
+export type QuickCustomerInput = z.input<typeof quickCustomerSchema>;
