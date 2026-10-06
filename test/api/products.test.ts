@@ -5,6 +5,7 @@ import { createDatabase } from "../../src/worker/db/client";
 import { documentLines, documents, products, stockMovements } from "../../src/worker/db/schema";
 import { errorOf } from "../helpers/api";
 import { createProduct, productInput } from "../helpers/catalog";
+import { purchase, purchaseInput, saleInput, sell } from "../helpers/sales";
 import { addStaff, createStore } from "../helpers/stores";
 
 const db = createDatabase(env.DB);
@@ -121,6 +122,47 @@ describe("tạo hàng hóa", () => {
     const staff = await addStaff(store);
     const res = await staff.api.products.$post({ json: productInput() });
     expect(res.status).toBe(403);
+  });
+
+  it("gửi lại cùng idempotencyKey (mạng chập chờn, bấm hai lần) trả lại hàng cũ, không tạo thêm", async () => {
+    const store = await createStore();
+    const key = crypto.randomUUID();
+    const input = productInput({ idempotencyKey: key, openingStock: 24_000 });
+
+    const first = await store.owner.api.products.$post({ json: input });
+    expect(first.status).toBe(201);
+    const created = await first.json();
+
+    // Gửi lại với nội dung khác cũng trả về hàng CŨ (không so nội dung, giống chứng từ).
+    const second = await store.owner.api.products.$post({
+      json: { ...input, name: "Tên khác" },
+    });
+    expect(second.status).toBe(200);
+    expect(await second.json()).toMatchObject({ id: created.id, name: created.name });
+
+    const rows = await db.select().from(products).where(eq(products.storeId, store.storeId));
+    expect(rows).toHaveLength(1);
+    const docs = await db.select().from(documents).where(eq(documents.storeId, store.storeId));
+    expect(docs).toHaveLength(1); // không tạo thêm phiếu "Tồn đầu kỳ"
+
+    // Hai request song song (race): request thứ hai vấp UNIQUE idempotency, đọc lại và trả hàng cũ.
+    const key2 = crypto.randomUUID();
+    const [a, b] = await Promise.all([
+      store.owner.api.products.$post({
+        json: productInput({ idempotencyKey: key2, name: "Đua A" }),
+      }),
+      store.owner.api.products.$post({
+        json: productInput({ idempotencyKey: key2, name: "Đua B" }),
+      }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 201]);
+    const [ja, jb] = await Promise.all([a.json(), b.json()]);
+    expect(ja.id).toBe(jb.id);
+    const rows2 = await db
+      .select()
+      .from(products)
+      .where(and(eq(products.storeId, store.storeId), eq(products.idempotencyKey, key2)));
+    expect(rows2).toHaveLength(1);
   });
 });
 
@@ -503,5 +545,58 @@ describe("nhập Excel: nhóm lỗi thì ghi lại từng dòng", () => {
       .from(documents)
       .where(and(eq(documents.storeId, store.storeId), eq(documents.type, "stock_count")));
     expect(kk.map((d) => d.code).sort()).toEqual(["KK000001", "KK000002", "KK000003"]);
+  });
+});
+
+describe("chi tiết hàng: đã bán 30 ngày, phiếu nhập gần nhất", () => {
+  it("cộng hóa đơn bán (theo đơn vị cơ bản), bỏ hóa đơn đã hủy và hóa đơn quá 30 ngày", async () => {
+    const store = await createStore();
+    const p = await createProduct(store.owner, {
+      openingStock: 100_000,
+      units: [{ name: "Thùng", factor: 12, salePrice: null, barcode: null }],
+    });
+    const fresh = await (
+      await store.owner.api.products[":id"].$get({ param: { id: p.id } })
+    ).json();
+    expect(fresh).toMatchObject({ sold30d: 0, lastPurchase: null });
+
+    await sell(
+      store.owner,
+      saleInput([{ productId: p.id, unitName: "Chai", qty: 3_000, unitPrice: 38_000 }]),
+    );
+    await sell(
+      store.owner,
+      saleInput([{ productId: p.id, unitName: "Thùng", qty: 1_000, unitPrice: 400_000 }]),
+    );
+    const cancelled = await sell(
+      store.owner,
+      saleInput([{ productId: p.id, unitName: "Chai", qty: 5_000, unitPrice: 38_000 }]),
+    );
+    await store.owner.api.documents[":id"].cancel.$post({ param: { id: cancelled.id } });
+    // Hóa đơn cũ hơn 30 ngày: lùi thời gian tạo.
+    const old = await sell(
+      store.owner,
+      saleInput([{ productId: p.id, unitName: "Chai", qty: 7_000, unitPrice: 38_000 }]),
+    );
+    await db
+      .update(documents)
+      .set({ createdAt: Date.now() - 31 * 86_400_000 })
+      .where(eq(documents.id, old.id));
+
+    const pn = await purchase(
+      store.owner,
+      purchaseInput([{ productId: p.id, unitName: "Chai", qty: 10_000, unitPrice: 30_000 }]),
+    );
+    const res = await store.owner.api.products[":id"].$get({ param: { id: p.id } });
+    const detail = await res.json();
+    expect(detail.sold30d).toBe(15_000);
+    expect(detail.lastPurchase).toEqual({ id: pn.id, code: pn.code, createdAt: pn.createdAt });
+
+    // Nhân viên thấy đã bán 30 ngày, không thấy giá vốn lẫn phiếu nhập gần nhất (gắn với giá vốn).
+    const staff = await addStaff(store);
+    const staffView = await (await staff.api.products[":id"].$get({ param: { id: p.id } })).json();
+    expect(staffView).toMatchObject({ sold30d: 15_000 });
+    expect(staffView).not.toHaveProperty("costPrice");
+    expect(staffView).not.toHaveProperty("lastPurchase");
   });
 });

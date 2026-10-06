@@ -5,6 +5,9 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
 import { NotFoundPage, PlaceholderPage } from "./features/placeholder/PlaceholderPage";
 import { MobileCheckoutPage } from "./features/pos/MobileCheckoutPage";
+import { ProductDetailPage } from "./features/products/ProductDetailPage";
+import { ProductFormPage } from "./features/products/ProductFormPage";
+import { ProductListPage } from "./features/products/ProductListPage";
 import { PosPage } from "./features/pos/PosPage";
 import { PosProvider } from "./features/pos/PosProvider";
 import type { PageMeta } from "./lib/page-meta";
@@ -46,10 +49,12 @@ export const routes: RouteObject[] = [
               },
             ],
           },
-          page("/hang-hoa", "Vận hành", "Hàng hóa"),
-          page("/hang-hoa/moi", "Hàng hóa", "Thêm hàng hóa"),
-          page("/hang-hoa/:id", "Hàng hóa", "Chi tiết hàng hóa"),
-          page("/hang-hoa/:id/sua", "Hàng hóa", "Sửa hàng hóa"),
+          { path: "/hang-hoa", handle: meta("Vận hành", "Hàng hóa"), element: <ProductListPage /> },
+          {
+            path: "/hang-hoa/:id",
+            handle: meta("Hàng hóa", "Chi tiết hàng hóa"),
+            element: <ProductDetailPage />,
+          },
           page("/kiem-kho/:id", "Hàng hóa", "Kiểm kho"),
           page("/so-no", "Vận hành", "Sổ nợ"),
           page("/so-no/:contactId", "Sổ nợ", "Chi tiết công nợ"),
@@ -57,6 +62,16 @@ export const routes: RouteObject[] = [
           {
             element: <RequireOwner />,
             children: [
+              {
+                path: "/hang-hoa/moi",
+                handle: meta("Hàng hóa", "Thêm hàng hóa"),
+                element: <ProductFormPage />,
+              },
+              {
+                path: "/hang-hoa/:id/sua",
+                handle: meta("Hàng hóa", "Sửa hàng hóa"),
+                element: <ProductFormPage />,
+              },
               page("/nhap-hang/moi", "Hàng hóa", "Nhập hàng"),
               page("/nhap-hang/:id", "Hàng hóa", "Phiếu nhập hàng"),
               page("/tong-quan", "Báo cáo", "Tổng quan"),

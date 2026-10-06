@@ -3,6 +3,7 @@ import { toSearch } from "../text";
 import {
   codeSchema,
   idSchema,
+  idempotencyKeySchema,
   moneySchema,
   optionalText,
   paginationSchema,
@@ -101,6 +102,8 @@ export const createProductSchema = z
     costPrice: moneySchema("giá vốn").default(0),
     /** Tồn đầu kỳ (milli đơn vị cơ bản), ghi qua phiếu kiểm kho "Tồn đầu kỳ". */
     openingStock: qtyMilliSchema("tồn kho ban đầu").default(0),
+    /** Chống tạo trùng khi gửi lại (mạng chập chờn, bấm hai lần). */
+    idempotencyKey: idempotencyKeySchema,
   })
   .superRefine(checkUnits);
 

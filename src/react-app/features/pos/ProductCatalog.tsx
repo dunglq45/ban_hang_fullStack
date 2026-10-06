@@ -1,5 +1,6 @@
 import type { KeyboardEvent, RefObject } from "react";
-import type { Category, PosProduct } from "../../api/pos";
+import type { Category } from "../../api/categories";
+import type { PosProduct } from "../../api/pos";
 import { Input } from "../../components/ui/Input";
 import { Kbd } from "../../components/ui/Kbd";
 import { PlusIcon, SearchIcon } from "../../components/ui/icons";

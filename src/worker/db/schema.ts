@@ -134,12 +134,16 @@ export const products = sqliteTable(
     showInPos: integer("show_in_pos", { mode: "boolean" }).notNull().default(true),
     imageKey: text("image_key"),
     note: text("note"),
+    // Chống tạo trùng khi gửi lại POST /products (mạng chập chờn, bấm hai lần). SQLite cho nhiều
+    // NULL cùng tồn tại trong một UNIQUE, nên hàng tạo trước khi có cột này không bị ảnh hưởng.
+    idempotencyKey: text("idempotency_key"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [
     check("products_stock_check", sql`${t.stock} >= 0 OR ${t.allowNegative} = 1`),
     unique("products_store_code_unique").on(t.storeId, t.code),
+    unique("products_store_idempotency_unique").on(t.storeId, t.idempotencyKey),
     index("idx_products_search").on(t.storeId, t.isActive, t.nameSearch),
     index("idx_products_barcode").on(t.storeId, t.barcode),
   ],

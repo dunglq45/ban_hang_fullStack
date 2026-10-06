@@ -74,9 +74,11 @@ export const productRoutes = new Hono<AuthEnv>()
   .post("/import", requireOwner, validate("json", importProductsSchema), async (c) =>
     c.json(await importProducts(c.get("db"), c.get("user"), c.req.valid("json").rows)),
   )
-  .post("/", requireOwner, validate("json", createProductSchema), async (c) =>
-    c.json(await createProduct(c.get("db"), c.get("user"), c.req.valid("json")), 201),
-  )
+  // 201: tạo mới; 200: idempotencyKey đã dùng, trả lại hàng cũ.
+  .post("/", requireOwner, validate("json", createProductSchema), async (c) => {
+    const result = await createProduct(c.get("db"), c.get("user"), c.req.valid("json"));
+    return c.json(result.product, result.replayed ? 200 : 201);
+  })
   .get("/:id", validate("param", idParamSchema), async (c) =>
     c.json(await getProduct(c.get("db"), c.get("user").role, c.req.valid("param").id)),
   )

@@ -15,6 +15,7 @@ export function productInput(overrides: Partial<CreateProductInput> = {}): Creat
     minStock: 6_000,
     units: [],
     openingStock: 0,
+    idempotencyKey: crypto.randomUUID(),
     ...overrides,
   };
 }

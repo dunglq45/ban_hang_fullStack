@@ -15,3 +15,8 @@ export const AFTER_SALE_INVALIDATE = [
   ["documents"],
   ["reports"],
 ] as const;
+export const productListQueryKey = (params: object) =>
+  ["products", "list", params] as const;
+export const productQueryKey = (id: string) => ["products", "detail", id] as const;
+export const movementsQueryKey = (id: string, params: object) =>
+  ["products", "movements", id, params] as const;

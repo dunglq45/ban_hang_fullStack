@@ -5,6 +5,7 @@ import type { Database } from "../db/client";
 import {
   categories,
   contacts,
+  documentLines,
   documents,
   type MovementType,
   productUnits,
@@ -174,6 +175,15 @@ export function productsRepository(db: Database, storeId: string) {
       return row?.v ?? 0;
     },
 
+    /** Hàng đã tạo với cùng idempotencyKey (nếu có): gửi lại POST /products thì trả hàng này. */
+    findByIdempotencyKey(key: string) {
+      return db
+        .select({ id: products.id })
+        .from(products)
+        .where(and(eq(products.storeId, storeId), eq(products.idempotencyKey, key)))
+        .get();
+    },
+
     async findById(id: string) {
       const product = await db
         .select({ ...listColumns, note: products.note, createdAt: products.createdAt })
@@ -183,6 +193,51 @@ export function productsRepository(db: Database, storeId: string) {
         .get();
       if (!product) return undefined;
       return { ...product, units: await unitsOf([id]) };
+    },
+
+    /**
+     * Số lượng bán ra (milli đơn vị cơ bản) từ `since`: hóa đơn bán trừ hàng trả lại,
+     * chỉ chứng từ đã hoàn thành (hóa đơn đã hủy không tính).
+     */
+    async soldSince(productId: string, since: number) {
+      const row = await db
+        .select({
+          qty: sql<number>`COALESCE(SUM(CASE WHEN ${documents.type} = 'sale' THEN ${documentLines.baseQty} ELSE -${documentLines.baseQty} END), 0)`,
+        })
+        .from(documentLines)
+        .innerJoin(
+          documents,
+          and(eq(documents.id, documentLines.documentId), eq(documents.storeId, storeId)),
+        )
+        .where(
+          and(
+            eq(documentLines.storeId, storeId),
+            eq(documentLines.productId, productId),
+            inArray(documents.type, ["sale", "sale_return"]),
+            eq(documents.status, "completed"),
+            gte(documents.createdAt, since),
+          ),
+        )
+        .get();
+      return row?.qty ?? 0;
+    },
+
+    /** Phiếu nhập đã hoàn thành gần nhất có mặt hàng này (giá vốn đổi theo phiếu đó). */
+    lastPurchase(productId: string) {
+      return db
+        .select({ id: documents.id, code: documents.code, createdAt: documents.createdAt })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.storeId, storeId),
+            eq(documents.type, "purchase"),
+            eq(documents.status, "completed"),
+            sql`EXISTS (SELECT 1 FROM ${documentLines} WHERE ${documentLines.documentId} = ${documents.id} AND ${documentLines.storeId} = ${storeId} AND ${documentLines.productId} = ${productId})`,
+          ),
+        )
+        .orderBy(desc(documents.createdAt))
+        .limit(1)
+        .get();
     },
 
     /** Chỉ kiểm tra tồn tại (không lấy dữ liệu). */

@@ -45,10 +45,24 @@ export async function listProducts(
   };
 }
 
-export async function getProduct(db: StoreDb, role: UserRole, id: string) {
+const DAY_MS = 86_400_000;
+
+export async function getProduct(db: StoreDb, role: UserRole, id: string, now = Date.now()) {
   const product = await db.products.findById(id);
   if (!product) throw new AppError("NOT_FOUND", "Không tìm thấy hàng hóa");
-  return serializeProduct(product, role);
+  // Phiếu nhập gần nhất gắn với giá vốn (mô tả nguồn của giá vốn bình quân) và nhân viên không
+  // được xem phiếu nhập (/api/purchases chỉ owner), nên bỏ qua cho staff như costPrice.
+  const [sold30d, lastPurchase] = await Promise.all([
+    db.products.soldSince(id, now - 30 * DAY_MS),
+    role === "owner" ? db.products.lastPurchase(id) : Promise.resolve(undefined),
+  ]);
+  return {
+    ...serializeProduct(product, role),
+    /** Đã bán trong 30 ngày qua (milli đơn vị cơ bản, trừ hàng trả lại). */
+    sold30d,
+    /** Phiếu nhập gần nhất: giá vốn bình quân cập nhật theo phiếu này. Chỉ owner. */
+    lastPurchase: ownerOnly(lastPurchase ?? null, role),
+  };
 }
 
 export async function lookupBarcode(db: StoreDb, role: UserRole, barcode: string) {
@@ -148,8 +162,16 @@ interface ProductRowInput {
 /**
  * Các câu lệnh tạo một mặt hàng (chưa gồm phiếu tồn đầu kỳ): cấp mã (nếu bỏ trống),
  * đẩy bộ đếm khi mã nhập tay đúng mẫu SPxxxxxx, INSERT hàng (stock = tồn đầu kỳ) và đơn vị.
+ * `idempotencyKey`: chỉ tạo đơn lẻ (POST /products) mới có; dòng import không chống trùng kiểu
+ * này (xem ghi chú ở importProducts).
  */
-function productStatements(db: StoreDb, id: string, input: ProductRowInput, now: number) {
+function productStatements(
+  db: StoreDb,
+  id: string,
+  input: ProductRowInput,
+  now: number,
+  idempotencyKey: string | null = null,
+) {
   const statements = [];
   let code: string | SQL<string>;
   if (input.code) {
@@ -178,6 +200,7 @@ function productStatements(db: StoreDb, id: string, input: ProductRowInput, now:
       isActive: input.isActive,
       showInPos: input.showInPos,
       note: input.note,
+      idempotencyKey,
       createdAt: now,
       updatedAt: now,
     }),
@@ -217,8 +240,24 @@ function openingStatements(
   });
 }
 
-/** Tạo hàng: hàng + đơn vị + (phiếu KK tồn đầu kỳ + sổ kho) trong MỘT batch. */
-export async function createProduct(db: StoreDb, actor: SessionUser, input: CreateInput) {
+export interface CreateProductResult {
+  product: Awaited<ReturnType<typeof getProduct>>;
+  /** true: idempotencyKey đã dùng trước đó, trả lại hàng cũ, không ghi gì thêm. */
+  replayed: boolean;
+}
+
+/**
+ * Tạo hàng: hàng + đơn vị + (phiếu KK tồn đầu kỳ + sổ kho) trong MỘT batch.
+ * Gửi lại cùng idempotencyKey (mạng chập chờn, bấm hai lần) trả lại hàng đã tạo, không tạo thêm.
+ */
+export async function createProduct(
+  db: StoreDb,
+  actor: SessionUser,
+  input: CreateInput,
+): Promise<CreateProductResult> {
+  const existing = await db.products.findByIdempotencyKey(input.idempotencyKey);
+  if (existing) return { product: await getProduct(db, actor.role, existing.id), replayed: true };
+
   await assertCategory(db, input.categoryId);
   await assertBarcodesFree(db, input);
   const now = Date.now();
@@ -226,13 +265,18 @@ export async function createProduct(db: StoreDb, actor: SessionUser, input: Crea
   const opening = openingItem(id, input);
   try {
     await db.batchAll([
-      ...productStatements(db, id, input, now),
+      ...productStatements(db, id, input, now, input.idempotencyKey),
       ...openingStatements(db, actor, opening ? [opening] : [], now),
     ]);
   } catch (err) {
+    // Request trùng gửi gần như đồng thời: lượt đọc ở trên chưa thấy, nhưng INSERT vấp UNIQUE.
+    if (isConstraintError(err, "UNIQUE", "products.idempotency_key")) {
+      const again = await db.products.findByIdempotencyKey(input.idempotencyKey);
+      if (again) return { product: await getProduct(db, actor.role, again.id), replayed: true };
+    }
     mapWriteError(err);
   }
-  return getProduct(db, actor.role, id);
+  return { product: await getProduct(db, actor.role, id), replayed: false };
 }
 
 /**

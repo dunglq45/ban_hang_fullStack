@@ -5,14 +5,12 @@ import { api } from "./client";
 import { call, callWithStatus } from "./errors";
 import {
   AFTER_SALE_INVALIDATE,
-  categoriesQueryKey,
   contactQueryKey,
   customerSearchQueryKey,
   posProductsQueryKey,
 } from "./keys";
 
 export type PosProduct = InferResponseType<typeof api.products.pos.$get, 200>["items"][number];
-export type Category = InferResponseType<typeof api.categories.$get, 200>["items"][number];
 export type ContactItem = InferResponseType<typeof api.contacts.$get, 200>["items"][number];
 export type SaleDocument = InferResponseType<typeof api.sales.$post, 201>;
 export type LookupResult = InferResponseType<typeof api.products.lookup.$get, 200>;
@@ -22,14 +20,6 @@ export function usePosProducts() {
   return useQuery({
     queryKey: posProductsQueryKey,
     queryFn: async () => (await call(api.products.pos.$get())).items,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useCategories() {
-  return useQuery({
-    queryKey: categoriesQueryKey,
-    queryFn: async () => (await call(api.categories.$get())).items,
     staleTime: 5 * 60_000,
   });
 }

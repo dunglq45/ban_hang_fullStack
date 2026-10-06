@@ -31,10 +31,11 @@ function setFieldValue(el: TextField, value: string) {
 /**
  * Nhận mã từ máy quét mã vạch (giả lập bàn phím: gõ rất nhanh rồi Enter) ở mọi nơi trên màn
  * Bán hàng:
- * - Focus ở ô nhập (ô tìm, giá, số lượng...): chuỗi phím nhanh được coi là mã quét; từ ký tự thứ 3
+ * - Focus ở ô nhập khác ô tìm (giá, số lượng...): chuỗi phím nhanh được coi là mã quét; từ ký tự thứ 3
  *   không cho chèn vào ô, khi Enter thì trả ô về giá trị trước khi quét rồi mới thêm hàng.
  * - Focus ở nút hoặc trang: ≥ 4 ký tự rồi Enter là mã quét (máy quét chậm cũng được), Enter không
  *   "bấm" nút đang focus.
+ * - Ô tìm hàng (`data-pos-search`): để PosPage xử lý Enter.
  * Không chạy khi có hộp thoại đang mở hoặc đang ở ô chọn (select).
  */
 export function useBarcodeScanner(onScan: (code: string) => void) {
@@ -68,6 +69,12 @@ export function useBarcodeScanner(onScan: (code: string) => void) {
       if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
       const active = document.activeElement;
       if (document.querySelector('[role="dialog"]') || active instanceof HTMLSelectElement) {
+        reset();
+        return;
+      }
+      // Ô tìm hàng tự xử lý Enter với toàn bộ chữ trong ô (kể cả mã quét dính sau chữ gõ dở),
+      // không cắt chuỗi theo khoảng cách phím (trình duyệt bận có thể làm khoảng cách > 35ms).
+      if (active instanceof HTMLElement && active.dataset.posSearch !== undefined) {
         reset();
         return;
       }

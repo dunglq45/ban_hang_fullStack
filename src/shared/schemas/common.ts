@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** Khóa chống gửi trùng: UUIDv7 do client sinh, giữ nguyên khi gửi lại cùng một thao tác. */
+export const idempotencyKeySchema = z.uuid({ error: "Thiếu hoặc sai mã chống gửi trùng" });
+
 /** SĐT di động Việt Nam: 10 số, bắt đầu bằng 0. Bỏ khoảng trắng, dấu chấm, gạch ngang người dùng gõ. */
 export const phoneSchema = z
   .string({ error: "Vui lòng nhập số điện thoại" })

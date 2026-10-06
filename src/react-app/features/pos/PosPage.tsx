@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { errorMessage } from "../../api/errors";
-import { lookupBarcode, usePosProducts, useCategories } from "../../api/pos";
+import { useCategories } from "../../api/categories";
+import { lookupBarcode, usePosProducts } from "../../api/pos";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ChevronRightIcon } from "../../components/ui/icons";
@@ -119,6 +120,14 @@ export function PosPage() {
     if (filtered.length === 1) {
       add(filtered[0]!);
       setQuery("");
+      return;
+    }
+    // Quét khi ô tìm đang có chữ gõ dở ("mi8934588012345"): thử dãy số cuối như mã vạch,
+    // thêm hàng rồi trả lại phần chữ đã gõ.
+    const trailing = /^(.*?)(\d{8,})$/.exec(q);
+    if (trailing && trailing[1] && findExact(all, trailing[2]!)) {
+      addByCode(trailing[2]!);
+      setQuery(trailing[1]);
       return;
     }
     if (filtered.length === 0 && /^\S{4,}$/.test(q)) void lookup(q);

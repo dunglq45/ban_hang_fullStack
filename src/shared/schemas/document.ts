@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  idempotencyKeySchema,
   idSchema,
   MAX_AMOUNT,
   moneySchema,
@@ -7,6 +8,8 @@ import {
   paginationSchema,
   qtyMilliSchema,
 } from "./common";
+
+export { idempotencyKeySchema };
 
 export const MAX_DOCUMENT_LINES = 200;
 export const PAYMENT_METHOD_VALUES = ["cash", "transfer"] as const;
@@ -18,9 +21,6 @@ export const DOCUMENT_TYPE_VALUES = [
   "stock_count",
 ] as const;
 export const DOCUMENT_STATUS_VALUES = ["draft", "completed", "cancelled"] as const;
-
-/** Khóa chống gửi trùng: UUIDv7 do client sinh, giữ nguyên khi gửi lại cùng một thao tác. */
-export const idempotencyKeySchema = z.uuid({ error: "Thiếu hoặc sai mã chống gửi trùng" });
 
 export const saleLineSchema = z.object({
   productId: idSchema,

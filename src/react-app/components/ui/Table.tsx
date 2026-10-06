@@ -12,7 +12,8 @@ export function Table({
   ...props
 }: ComponentProps<"table"> & { minWidth?: number }) {
   return (
-    <div className="overflow-x-auto">
+    // relative: phần tử sr-only (absolute) trong bảng không thoát khỏi khung cuộn làm giãn trang.
+    <div className="relative overflow-x-auto">
       <table
         className={cn("w-full border-collapse text-sm", className)}
         style={minWidth ? { minWidth } : undefined}
