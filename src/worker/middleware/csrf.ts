@@ -18,7 +18,9 @@ export const csrf = createMiddleware(async (c, next) => {
   if (!UPLOAD_PATH.test(c.req.path)) {
     const type = c.req.header("Content-Type");
     // Request không có body (vd. đăng xuất) thì không cần Content-Type; có body thì phải là JSON.
-    const hasBody = type !== undefined || c.req.raw.body !== null;
+    // Trình duyệt gửi POST không body kèm "Content-Length: 0", workerd vẫn cho body là stream rỗng.
+    const emptyBody = c.req.raw.body === null || c.req.header("Content-Length") === "0";
+    const hasBody = type !== undefined || !emptyBody;
     if (hasBody && !/^application\/json\s*(;|$)/i.test(type ?? "")) {
       throw new AppError("UNSUPPORTED_MEDIA_TYPE", "Dữ liệu phải gửi dạng JSON");
     }

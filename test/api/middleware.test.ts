@@ -49,6 +49,37 @@ describe("chống CSRF cho request ghi", () => {
     expect((await errorOf(ok)).code).not.toBe("CSRF_REJECTED");
   });
 
+  it("POST không body (như trình duyệt gửi khi đăng xuất) không cần Content-Type", async () => {
+    const store = await createStore();
+    const res = await rawFetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Requested-With": "fetch", Cookie: store.owner.cookie },
+      // Body rỗng không kèm Content-Type: server nhận "Content-Length: 0" và body là stream rỗng.
+      body: new Uint8Array(0),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("body rỗng nhưng khai Content-Type không phải JSON → 415", async () => {
+    const res = await rawFetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-Requested-With": "fetch", "Content-Type": "text/plain" },
+      body: new Uint8Array(0),
+    });
+    expect(res.status).toBe(415);
+  });
+
+  it("có body mà không khai Content-Type → 415", async () => {
+    const res = await rawFetch("/api/auth/login", {
+      method: "POST",
+      headers: { "X-Requested-With": "fetch" },
+      body: new Blob([loginBody]).stream(),
+      duplex: "half",
+    } as RequestInit);
+    expect(res.status).toBe(415);
+  });
+
   it("GET không cần header", async () => {
     const res = await rawFetch("/api/health");
     expect(res.status).toBe(200);
