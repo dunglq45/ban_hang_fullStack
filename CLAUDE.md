@@ -22,13 +22,20 @@ Toàn bộ chữ trên giao diện là tiếng Việt.
 - Quản lý gói: pnpm.
 
 ## Lệnh thường dùng
-(Cập nhật mục này sau khi scaffold xong.)
-- `pnpm dev`: chạy local (Vite + Worker + D1 local).
-- `pnpm test`: chạy toàn bộ test.
-- `pnpm typecheck`, `pnpm lint`.
-- `pnpm db:generate`: sinh migration từ schema Drizzle.
-- `pnpm db:migrate:local`, `pnpm db:migrate:remote`.
-- `pnpm deploy`.
+- `pnpm dev`: chạy local tại http://localhost:5173 (Vite + Worker + D1/R2 local, dữ liệu lưu trong `.wrangler/`).
+- `pnpm build`: build Worker và SPA vào `dist/`. `pnpm preview`: build rồi chạy bản build.
+- `pnpm test`: chạy toàn bộ test một lần (`vitest run`), gồm 2 project: `worker` (test/, chạy trong workerd qua `@cloudflare/vitest-pool-workers`, tự áp dụng migration vào D1 test) và `web` (`src/react-app/**/*.test.tsx`, jsdom). Chạy riêng: `pnpm test --project worker`. Chế độ watch: `pnpm test:watch`.
+- `pnpm typecheck`: `tsc -b` (project references: worker → app, node, test).
+- `pnpm lint`, `pnpm format` (prettier, bỏ qua `docs/`, `prompts/`, `design/`).
+- `pnpm db:generate`: sinh SQL migration vào `migrations/` từ `src/worker/db/schema.ts`.
+- `pnpm db:migrate:local`: áp dụng migration vào D1 local. Chạy lại sau mỗi lần `db:generate`.
+- `pnpm db:migrate:remote`, `pnpm deploy`: chỉ người dùng tự chạy (hook chặn).
+- `pnpm cf-typegen`: sinh lại `worker-configuration.d.ts` (type `Env` + runtime). Chạy sau khi sửa `wrangler.jsonc`.
+
+Lưu ý môi trường:
+- `compatibility_date` bị giới hạn bởi workerd đi kèm `@cloudflare/vitest-pool-workers` (đang là 2026-08-22). Không nâng quá ngày đó, nếu không test sẽ không khởi động được.
+- Vitest giữ ở 4.1.x (pool-workers chưa hỗ trợ Vitest 5); TypeScript giữ ở 6.0.x (typescript-eslint chưa hỗ trợ TS 7).
+- Type `AppType` cho Hono RPC: client import từ `src/worker/index.ts`; `tsc -b` lấy type qua `.d.ts` của project worker. Route phải khai báo theo chuỗi `.get().post()...` để type suy ra được.
 
 ## Quy tắc bất di bất dịch
 1. **Đa cửa hàng (multi-tenant):** mọi bảng nghiệp vụ có `store_id`. `store_id` luôn lấy từ session trên server, KHÔNG BAO GIỜ nhận từ request body/query. Mọi query phải lọc theo `store_id`; dùng các hàm repository có sẵn tham số `storeId`, không viết query trần ở route.

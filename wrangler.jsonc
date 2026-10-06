@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "store-app",
+  "main": "./src/worker/index.ts",
+  // Ngày mới nhất mà CẢ workerd của wrangler lẫn workerd của @cloudflare/vitest-pool-workers hỗ trợ.
+  // Nâng lên khi pool-workers cập nhật (test báo lỗi "requires compatibility date" nếu vượt quá).
+  "compatibility_date": "2026-08-22",
+  // Chưa thư viện nào cần nodejs_compat (Hono, Drizzle D1, WebCrypto đều chạy native).
+  "compatibility_flags": [],
+  "observability": { "enabled": true },
+  "assets": {
+    // Vite plugin tự điền "directory" bằng thư mục build của client.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "store-app-db",
+      // Thay bằng database_id in ra sau khi chạy: pnpm wrangler d1 create store-app-db
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "store-app-images",
+    },
+  ],
+}

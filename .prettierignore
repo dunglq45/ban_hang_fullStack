@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+dist/
+.wrangler/
+migrations/
+design/
+worker-configuration.d.ts
+docs/
+prompts/
+.claude/
+CLAUDE.md
+README.md

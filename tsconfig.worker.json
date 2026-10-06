@@ -1,0 +1,14 @@
+{
+  // Worker + shared. Sinh .d.ts để React app lấy type AppType cho Hono RPC
+  // mà không phải nạp runtime types của Workers (xung đột với DOM).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/tsc/worker",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsc/worker.tsbuildinfo",
+    "lib": ["ES2024"],
+    "types": []
+  },
+  "include": ["src/worker", "src/shared", "worker-configuration.d.ts"]
+}

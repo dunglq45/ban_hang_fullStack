@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* Design tokens, xem mục "Thiết kế" trong CLAUDE.md. */
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  /* Chữ */
+  --color-ink: #101828; /* chữ chính */
+  --color-ink-muted: #5b6474; /* chữ phụ */
+  --color-ink-body: #344054; /* chữ thân */
+  --color-ink-soft: #475467; /* chữ thân nhạt */
+
+  /* Viền và nền */
+  --color-line: #e4e7ec;
+  --color-line-input: #d0d5dd;
+  --color-page: #f6f7f9;
+  --color-table-head: #f9fafb;
+
+  /* Màu chính; nền nhạt = màu chính alpha 8% */
+  --color-primary: #1849a9;
+  --color-primary-soft: rgb(24 73 169 / 0.08);
+
+  /* Trạng thái: nợ/sắp hết, hết hàng, tăng/đã trả */
+  --color-warn: #b54708;
+  --color-warn-dot: #f79009;
+  --color-danger: #b42318;
+  --color-danger-dot: #f04438;
+  --color-success: #067647;
+  --color-success-dot: #12b76a;
+
+  /* Bo góc: nút nhỏ, input/nút, card */
+  --radius-small: 6px;
+  --radius-control: 8px;
+  --radius-card: 10px;
+
+  /* Vùng bấm tối thiểu: h-touch, min-h-touch, min-w-touch, size-touch */
+  --spacing-touch: 44px;
+}
+
+/* Ô số trong bảng: chữ số đều nhau, căn phải. */
+@utility num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@layer base {
+  body {
+    @apply bg-page font-sans text-ink antialiased;
+  }
+}
