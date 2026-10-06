@@ -9,7 +9,7 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 | 02 Database | Xong | Schema Drizzle 14 bảng + migration `0000_init.sql`; helper qty/money/text/codes/uuid/password; `getDb(env, storeId)`; seed `pnpm db:seed:local`; 40 test |
 | 03 API nền tảng, auth | Xong | AppError + middleware lỗi/CSRF/session/requireAuth/requireOwner/rateLimit; /api/auth/*, /api/store, /api/users; migration `0001_session_remember.sql`; Cron dọn dữ liệu đăng nhập; helper test 2 cửa hàng; 82 test |
 | 04 API hàng hóa, danh bạ | Xong | /api/categories, /api/products (list/lookup/pos/detail/movements/create/update/import/image), /api/images, /api/contacts; serialize theo role; 125 test |
-| 05 API bán hàng | Chưa làm | |
+| 05 API bán hàng | Xong | POST /api/sales, GET /api/documents(/:id), POST /api/documents/:id/cancel (hóa đơn bán); câu chặn `guardChanges`; 155 test |
 | 06 API nhập hàng, kiểm kho | Chưa làm | |
 | 07 API công nợ, báo cáo | Chưa làm | |
 | 08 Frontend nền tảng | Chưa làm | |
@@ -76,6 +76,18 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 - Giai đoạn 04: Drizzle bỏ tên bảng khi select một bảng, nên subquery tương quan phải ghi rõ cột ngoài (`"categories"."id"` trong `listWithCounts`).
 - Giai đoạn 04: test helper `test/helpers/catalog.ts`: `productInput`, `createProduct`, `contactInput`, `createContact`.
 
+- Giai đoạn 05 (người dùng đã duyệt): mỗi dòng hóa đơn 3 câu lệnh trong batch (INSERT dòng, UPDATE tồn, INSERT sổ kho) như DATABASE.md; hóa đơn hiển thị tên hàng HIỆN TẠI (document_lines không lưu tên); hủy hóa đơn có thể làm nợ âm (khách trả trước).
+- Giai đoạn 05: batch bán = bump HD → INSERT documents → mỗi dòng (INSERT document_lines với cost_price subquery, UPDATE products stock − base_qty, INSERT stock_movements với stock_after/unit_cost subquery) → nếu ghi nợ (UPDATE contacts có điều kiện hạn mức + câu chặn, INSERT debt_entries balance_after subquery). Subquery dùng alias `p`/`c` và lọc store_id.
+- Giai đoạn 05: `guardChanges` (`lib/guard.ts`, `db.guardChanges(n)`): câu SELECT đặt ngay sau một UPDATE có điều kiện; nếu `changes()` ≠ n thì gọi `json('batch-guard')` gây lỗi "malformed JSON" → cả batch rollback; `isGuardError` nhận ra lỗi này. Dùng cho: hủy chứng từ (chống hủy 2 lần đồng thời) và hạn mức nợ (chống 2 hóa đơn nợ song song cùng lọt). Phải viết bằng query builder (`db.run(sql)` không chạy được trong batch Drizzle D1). Không thêm cột/hàm json() khác vào các batch có câu chặn.
+- Giai đoạn 05: đơn vị bán xác định bằng `unitName` (so theo toSearch); server tự lấy factor, client không gửi factor. Lưu tên đơn vị chuẩn của hàng.
+- Giai đoạn 05: idempotency: tra key trước (trả hóa đơn cũ, HTTP 200); hai request cùng key đồng thời → request sau vấp UNIQUE `documents.idempotency_key` → đọc lại và trả hóa đơn cũ. Key thuộc chứng từ loại khác → `IDEMPOTENCY_CONFLICT`. Không so nội dung request.
+- Giai đoạn 05: OUT_OF_STOCK: batch vấp CHECK `products_stock_check` → đọc tồn hiện tại, gộp số yêu cầu theo hàng, báo hàng thiếu đầu tiên (message "Không đủ hàng trong kho: X chỉ còn N đơn vị") + `details.items`.
+- Giai đoạn 05: tiền: `lineTotal = lineAmount(qty, unitPrice)`; `total = subtotal − discount` (discount ≤ subtotal); lưu `paid = min(paid, total)`; `debtAmount = total − paid`; subtotal ≤ MAX_AMOUNT; ghi nợ toàn bộ thì `payment_method = NULL`.
+- Giai đoạn 05: staff không bán dưới giá vốn: từng dòng (`unitPrice < cost_price × factor`) và cả hóa đơn sau chiết khấu (`total < Σ lineAmount(base_qty, cost_price)`) → `PRICE_BELOW_COST`. Staff gửi `force` bị bỏ qua. Khách ngừng giao dịch không bán được → `INVALID_CONTACT`.
+- Giai đoạn 05: hủy (owner, chỉ completed, hiện chỉ hóa đơn bán): UPDATE status có điều kiện + câu chặn → mỗi dòng cộng lại base_qty và ghi sổ kho `cancel` (unit_cost = giá vốn đã chụp ở dòng, note "Hủy HDxxx") → đảo nợ (debt_entries âm). `debt_since` dùng chung công thức `CASE WHEN debt + amount > 0 THEN COALESCE(debt_since, now) ELSE NULL END` cho cả tăng và giảm. Lỗi CHECK tồn khi hủy → `NEGATIVE_STOCK` (dùng cho hủy phiếu nhập ở giai đoạn 06).
+- Giai đoạn 05: xem chứng từ: staff chỉ xem/list hóa đơn bán (`type` khác → FORBIDDEN; list bị ép `type=sale`) và không có `costPrice` ở dòng. Chi tiết gồm `store` (tên, SĐT, địa chỉ, footer), `contact` (kèm nợ hiện tại), `lines` (mã, tên hàng, đơn vị, factor, qty, đơn giá, thành tiền), `createdBy`, `cancelledBy`. Danh sách lọc `type, status, contactId, from, to, q` (mã chứng từ hoặc tên khách không dấu).
+- Giai đoạn 05: test helper `test/helpers/sales.ts`: `saleInput(lines, overrides)` (paid mặc định = trả đủ, idempotencyKey ngẫu nhiên), `sell(user, input)`.
+
 ## Việc còn nợ
 
 - Người dùng tự chạy `wrangler login`, `wrangler d1 create store-app-db`, `wrangler r2 bucket create store-app-images` rồi thay `database_id` trong `wrangler.jsonc` (đang là UUID toàn số 0).
@@ -85,8 +97,12 @@ Cập nhật sau mỗi giai đoạn bằng lệnh /phase. Phiên mới đọc fi
 - Giới hạn đăng nhập theo SĐT vẫn cho phép người khác (đổi nhiều IP) cố tình khóa đăng nhập của một SĐT 15 phút; chấp nhận cho MVP.
 - Khi deploy: kiểm tra binding Rate Limiting (`namespace_id` 1001, 1002) và Cron Trigger hoạt động trên tài khoản Cloudflare (giai đoạn 15).
 - Tạo hàng và import chưa có idempotencyKey (không phải chứng từ theo quy tắc 6, nhưng gửi lại do mạng chập chờn sẽ tạo trùng hàng mã tự sinh + phiếu tồn đầu kỳ). Cân nhắc thêm khi làm giao diện (giai đoạn 10).
-- Tra mã vạch trả cả hàng ngừng bán (kèm `isActive`); POS (giai đoạn 09) phải chặn bán hàng ngừng bán. Server sẽ chặn ở service bán hàng (giai đoạn 05).
+- Tra mã vạch trả cả hàng ngừng bán (kèm `isActive`); server đã chặn bán (`PRODUCT_INACTIVE`, giai đoạn 05), POS (giai đoạn 09) nên báo sớm.
 - Hai lần upload ảnh song song cho cùng hàng có thể để lại một ảnh mồ côi trên R2 (chỉ tốn chỗ).
 - Import: nhóm hàng mới được tạo trước khi ghi hàng; nếu mọi dòng của nhóm đó lỗi khi ghi thì còn nhóm rỗng.
 - Seed (`scripts/seed.ts`) vẫn ghi SQL trực tiếp; mã SP theo design (vd. SP000052) cùng bộ đếm SP=127 vẫn đúng với `codeNumber`.
+- Giới hạn truy vấn của D1/Workers: hóa đơn 200 dòng ≈ 604 câu lệnh trong một batch. Nếu mỗi câu tính một query thì gói Free (~50 query/lần chạy) chỉ bán được ~15 dòng/hóa đơn; gói Paid 1000. Kiểm tra thật khi deploy (giai đoạn 15); nếu cần thì gộp INSERT nhiều dòng.
+- `debt_since` khi hủy mà nợ vẫn còn: giữ ngày bắt đầu nợ cũ (kể cả khi hóa đơn bị hủy là khoản nợ cũ nhất), nên "nợ quá N ngày" có thể dài hơn thực tế. Giai đoạn 07 (báo cáo tuổi nợ) cân nhắc tính lại từ debt_entries.
+- Staff có thể dò giá vốn qua lỗi `PRICE_BELOW_COST` (hệ quả của quy tắc không bán dưới giá vốn).
+- Giai đoạn 07: idempotencyKey của payments có UNIQUE riêng; quyết định có kiểm tra trùng chéo với documents không.
 - Nâng `compatibility_date` khi `@cloudflare/vitest-pool-workers` có bản đi kèm workerd mới hơn 2026-08-22.

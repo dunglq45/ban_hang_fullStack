@@ -4,8 +4,11 @@ import type { BatchItem } from "drizzle-orm/batch";
 import type { Database } from "../db/client";
 import type { CounterKind } from "../db/schema";
 import { codeStatements, counterAtLeast } from "../lib/codes";
+import { guardChanges } from "../lib/guard";
 import { categoriesRepository } from "./categories";
 import { contactsRepository } from "./contacts";
+import { debtsRepository } from "./debts";
+import { documentsRepository } from "./documents";
 import { productsRepository } from "./products";
 import { stockRepository } from "./stock";
 import { storeRepository } from "./store";
@@ -21,6 +24,8 @@ export function createRepositories(db: Database, storeId: string) {
       const [first, ...rest] = statements;
       if (first) await db.batch([first, ...rest]);
     },
+    /** Câu chặn: lỗi (rollback batch) nếu câu ngay trước không đổi đúng `expected` dòng. */
+    guardChanges: (expected = 1) => guardChanges(db, storeId, expected),
     codes: {
       /** Câu tăng bộ đếm + subquery lấy mã; đặt `bump` trước câu dùng `code` trong cùng batch. */
       next: (kind: CounterKind) => codeStatements(db, storeId, kind),
@@ -33,5 +38,7 @@ export function createRepositories(db: Database, storeId: string) {
     products: productsRepository(db, storeId),
     contacts: contactsRepository(db, storeId),
     stock: stockRepository(db, storeId),
+    documents: documentsRepository(db, storeId),
+    debts: debtsRepository(db, storeId),
   };
 }

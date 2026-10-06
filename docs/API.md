@@ -11,11 +11,11 @@ Quy ước:
 
 | HTTP | Mã |
 |---|---|
-| 400 | VALIDATION_ERROR (kèm `details.fields[{ path, message }]`), BAD_REQUEST, CANNOT_MODIFY_SELF, WRONG_PASSWORD, INVALID_CATEGORY, INVALID_IMAGE |
+| 400 | VALIDATION_ERROR (kèm `details.fields[{ path, message }]`), BAD_REQUEST, CANNOT_MODIFY_SELF, WRONG_PASSWORD, INVALID_CATEGORY, INVALID_IMAGE, INVALID_UNIT, INVALID_CONTACT, INVALID_DISCOUNT, AMOUNT_TOO_LARGE, DEBT_REQUIRES_CUSTOMER |
 | 401 | UNAUTHORIZED, INVALID_CREDENTIALS |
-| 403 | FORBIDDEN, ACCOUNT_DISABLED, CSRF_REJECTED |
+| 403 | FORBIDDEN, ACCOUNT_DISABLED, CSRF_REJECTED, PRICE_BELOW_COST |
 | 404 | NOT_FOUND |
-| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK |
+| 409 | PHONE_TAKEN, LAST_OWNER, CODE_TAKEN, BARCODE_TAKEN, CATEGORY_IN_USE, CATEGORY_NAME_TAKEN, NEGATIVE_STOCK, OUT_OF_STOCK (`details: { productId, name, stock, requested, items[] }`), PRODUCT_INACTIVE, DEBT_LIMIT_EXCEEDED (`details: { debt, debtLimit, debtAmount }`), ALREADY_CANCELLED, INVALID_STATUS, IDEMPOTENCY_CONFLICT |
 | 413 | IMAGE_TOO_LARGE |
 | 415 | UNSUPPORTED_MEDIA_TYPE |
 | 429 | TOO_MANY_ATTEMPTS, RATE_LIMITED |
@@ -58,7 +58,7 @@ Quy ước:
 | GET | /api/debts/summary | 🔒 tổng phải thu, quá 30 ngày, đã thu tháng này; tổng phải trả |
 
 ## Chứng từ
-| POST | /api/sales | 🔒 tạo hóa đơn bán (xem DATABASE.md) |
+| POST | /api/sales | 🔒 tạo hóa đơn bán (xem DATABASE.md). 201 = tạo mới, 200 = idempotencyKey đã dùng (trả hóa đơn cũ). `force` chỉ có tác dụng với owner |
 | POST | /api/purchases | 🔒👑 tạo phiếu nhập (status `draft` hoặc `completed`) |
 | POST | /api/purchases/:id/complete | 🔒👑 hoàn thành phiếu nháp |
 | GET | /api/documents | 🔒 `type, status, contactId, from, to, q` |

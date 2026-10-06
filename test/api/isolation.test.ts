@@ -4,6 +4,7 @@ import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { errorOf, rawFetch } from "../helpers/api";
 import { contactInput, createContact, createProduct, productInput } from "../helpers/catalog";
+import { saleInput, sell } from "../helpers/sales";
 import { createTwoStores } from "../helpers/stores";
 
 describe("cô lập dữ liệu giữa hai cửa hàng", () => {
@@ -128,5 +129,53 @@ describe("cô lập hàng hóa, nhóm hàng, danh bạ, ảnh (giai đoạn 04)"
       const res = await rawFetch(`/api/images/${path}`, { headers: { Cookie: b.owner.cookie } });
       expect(res.status).toBe(404);
     }
+  });
+});
+
+describe("cô lập bán hàng và chứng từ (giai đoạn 05)", () => {
+  it("B không bán được hàng của A, không ghi nợ cho khách của A, không xem/hủy hóa đơn của A", async () => {
+    const { a, b } = await createTwoStores();
+    const p = await createProduct(a.owner, { openingStock: 10_000 });
+    const kh = await createContact(a.owner);
+    const line = { productId: p.id, unitName: "Chai", qty: 1_000, unitPrice: 38_000 };
+    const doc = await sell(a.owner, saleInput([line], { contactId: kh.id, paid: 0 }));
+
+    const sellA = await b.owner.api.sales.$post({ json: saleInput([line]) });
+    expect((await errorOf(sellA)).code).toBe("NOT_FOUND");
+    const own = await createProduct(b.owner, { openingStock: 10_000 });
+    const useContact = await b.owner.api.sales.$post({
+      json: saleInput([{ ...line, productId: own.id }], { contactId: kh.id, paid: 0 }),
+    });
+    expect((await errorOf(useContact)).code).toBe("INVALID_CONTACT");
+
+    expect((await b.owner.api.documents[":id"].$get({ param: { id: doc.id } })).status).toBe(404);
+    const cancel = await b.owner.api.documents[":id"].cancel.$post({ param: { id: doc.id } });
+    expect(cancel.status).toBe(404);
+    const list = await (await b.owner.api.documents.$get({ query: { type: "sale" } })).json();
+    expect(list.items).toEqual([]);
+
+    // Bộ đếm HD riêng: hóa đơn đầu tiên của B vẫn là HD000001.
+    const first = await sell(b.owner, saleInput([{ ...line, productId: own.id }]));
+    expect(first.code).toBe("HD000001");
+    // A không bị ảnh hưởng.
+    const still = await (await a.owner.api.documents[":id"].$get({ param: { id: doc.id } })).json();
+    expect(still).toMatchObject({ status: "completed", contact: { debt: 38_000 } });
+  });
+
+  it("idempotencyKey tính riêng từng cửa hàng", async () => {
+    const { a, b } = await createTwoStores();
+    const pa = await createProduct(a.owner, { openingStock: 10_000 });
+    const pb = await createProduct(b.owner, { openingStock: 10_000 });
+    const key = crypto.randomUUID();
+    const line = { unitName: "Chai", qty: 1_000, unitPrice: 38_000 };
+    const da = await sell(
+      a.owner,
+      saleInput([{ ...line, productId: pa.id }], { idempotencyKey: key }),
+    );
+    const db2 = await sell(
+      b.owner,
+      saleInput([{ ...line, productId: pb.id }], { idempotencyKey: key }),
+    );
+    expect(db2.id).not.toBe(da.id);
   });
 });

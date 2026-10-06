@@ -212,6 +212,45 @@ export function productsRepository(db: Database, storeId: string) {
       return product ? { product, unit } : undefined;
     },
 
+    /**
+     * Hàng dùng để lập chứng từ (bán, nhập): giá vốn, tồn, trạng thái và các đơn vị quy đổi.
+     * Chỉ để tính toán/validate trước batch; tồn kho thật do UPDATE trong batch quyết định.
+     */
+    async forDocument(ids: string[]) {
+      const unique = [...new Set(ids)];
+      const rows: {
+        id: string;
+        code: string;
+        name: string;
+        baseUnit: string;
+        costPrice: number;
+        stock: number;
+        allowNegative: boolean;
+        isActive: boolean;
+      }[] = [];
+      for (const part of chunks(unique)) {
+        rows.push(
+          ...(await db
+            .select({
+              id: products.id,
+              code: products.code,
+              name: products.name,
+              baseUnit: products.baseUnit,
+              costPrice: products.costPrice,
+              stock: products.stock,
+              allowNegative: products.allowNegative,
+              isActive: products.isActive,
+            })
+            .from(products)
+            .where(and(eq(products.storeId, storeId), inArray(products.id, part)))),
+        );
+      }
+      const units = await unitsOf(unique);
+      return new Map(
+        rows.map((p) => [p.id, { ...p, units: units.filter((u) => u.productId === p.id) }]),
+      );
+    },
+
     /** Những mã vạch trong danh sách đã thuộc về hàng/đơn vị khác (trừ hàng excludeProductId). */
     async barcodesTaken(barcodes: string[], excludeProductId?: string) {
       const taken = new Set<string>();
