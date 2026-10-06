@@ -324,6 +324,7 @@ export function productsRepository(db: Database, storeId: string) {
           baseUnit: products.baseUnit,
           salePrice: products.salePrice,
           stock: products.stock,
+          minStock: products.minStock,
           allowNegative: products.allowNegative,
           imageKey: products.imageKey,
         })

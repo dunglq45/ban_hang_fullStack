@@ -312,6 +312,7 @@ describe("tra mã vạch, POS, lịch sử kho", () => {
   it("POS chỉ có hàng đang bán và hiện ở POS, kèm đơn vị", async () => {
     const store = await createStore();
     const shown = await createProduct(store.owner, {
+      minStock: 5_000,
       units: [{ name: "Thùng", factor: 12, salePrice: null, barcode: null }],
     });
     await createProduct(store.owner, { name: "Ẩn", showInPos: false });
@@ -322,6 +323,7 @@ describe("tra mã vạch, POS, lịch sử kho", () => {
       code: shown.code,
       baseUnit: "Chai",
       salePrice: 38_000,
+      minStock: 5_000,
       units: [{ name: "Thùng", factor: 12 }],
     });
   });
