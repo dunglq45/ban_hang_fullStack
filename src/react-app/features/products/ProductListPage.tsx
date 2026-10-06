@@ -26,6 +26,7 @@ import { useToast } from "../../components/ui/toast-context";
 import { cn } from "../../lib/cn";
 import { formatMoney, formatNumber, formatQty } from "../../lib/format";
 import { useDebouncedValue } from "../../lib/use-debounced-value";
+import { CreateStockCountDialog } from "../stock-counts/CreateStockCountDialog";
 import { CategoryDialog } from "./CategoryDialog";
 import { ImportDialog } from "./ImportDialog";
 import { productStatus } from "./status";
@@ -114,6 +115,7 @@ export function ProductListPage() {
   const [checked, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [managingCategories, setManagingCategories] = useState(false);
+  const [counting, setCounting] = useState(false);
 
   const items = useMemo(() => list.data?.items ?? [], [list.data]);
   // Chỉ tính các dòng đang hiện (đổi trang/bộ lọc thì dòng cũ không còn được chọn).
@@ -172,9 +174,9 @@ export function ProductListPage() {
             <Button variant="secondary" onClick={() => setImporting(true)}>
               Nhập từ Excel
             </Button>
-            <Link to="/kiem-kho/moi" className={buttonClass({ variant: "secondary" })}>
+            <Button variant="secondary" onClick={() => setCounting(true)}>
               Kiểm kho
-            </Link>
+            </Button>
             <Link to="/nhap-hang/moi" className={buttonClass({ variant: "secondary" })}>
               Nhập hàng
             </Link>
@@ -261,6 +263,9 @@ export function ProductListPage() {
               onClick={() => void bulkSetActive(true)}
             >
               Bán lại
+            </Button>
+            <Button variant="secondary" onClick={() => setCounting(true)}>
+              Kiểm kho
             </Button>
             <Button variant="ghost" onClick={() => setSelected(new Set())}>
               Bỏ chọn
@@ -432,6 +437,13 @@ export function ProductListPage() {
       {isOwner && <ImportDialog open={importing} onClose={() => setImporting(false)} />}
       {isOwner && (
         <CategoryDialog open={managingCategories} onClose={() => setManagingCategories(false)} />
+      )}
+      {isOwner && (
+        <CreateStockCountDialog
+          open={counting}
+          onClose={() => setCounting(false)}
+          selectedIds={[...selected]}
+        />
       )}
     </div>
   );

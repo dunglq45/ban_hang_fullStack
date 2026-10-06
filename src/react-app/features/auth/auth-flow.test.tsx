@@ -77,7 +77,9 @@ describe("đăng nhập và khung app", () => {
     expect(
       await within(nav).findByRole("link", { name: "Sổ nợ, 14 khách đang nợ" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Nhập hàng" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Tạo phiếu nhập hàng" }),
+    ).toBeInTheDocument();
   });
 
   it("nhân viên không thấy Tổng quan và bị chuyển khỏi trang chỉ dành cho chủ", async () => {

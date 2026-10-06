@@ -29,7 +29,7 @@ import {
   stockWarnings,
   summarize,
 } from "./cart";
-import { CustomerPicker } from "./CustomerPicker";
+import { ContactPicker } from "../contacts/ContactPicker";
 import { blockIfInvalidField, hasInvalidField } from "./invalid-field";
 import { usePos } from "./pos-context";
 import { MAX_TABS } from "./pos-tabs";
@@ -66,8 +66,9 @@ export function CartPanel({
             Đang gửi hóa đơn… Bấm + để mở hóa đơn mới cho khách tiếp theo.
           </p>
         )}
-        <CustomerPicker
-          customer={active.customer}
+        <ContactPicker
+          kind="customer"
+          contact={active.customer}
           onChange={(c) => updateActive((cart) => setCustomer(cart, c))}
         />
         <CartLines />

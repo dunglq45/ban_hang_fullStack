@@ -2,9 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { quickCustomerSchema } from "../../../shared/schemas/contact";
+import { quickCustomerSchema, quickSupplierSchema } from "../../../shared/schemas/contact";
 import { errorMessage } from "../../api/errors";
-import { type ContactItem, useCreateCustomer, useCustomerSearch } from "../../api/pos";
+import {
+  type ContactItem,
+  type ContactType,
+  useContactSearch,
+  useCreateContact,
+} from "../../api/pos";
 import { Alert } from "../../components/ui/Alert";
 import { Button, IconButton } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
@@ -14,9 +19,48 @@ import { Input } from "../../components/ui/Input";
 import { cn } from "../../lib/cn";
 import { contactLabel, formatMoney } from "../../lib/format";
 import { useDebouncedValue } from "../../lib/use-debounced-value";
-import type { CartCustomer } from "./cart";
 
-function toCartCustomer(c: ContactItem): CartCustomer {
+/** Đối tác đã chọn (khách của hóa đơn, nhà cung cấp của phiếu nhập). */
+export interface PickedContact {
+  id: string;
+  code: string;
+  name: string;
+  phone: string | null;
+  /** Nợ hiện tại: khách nợ mình (khách hàng) / mình nợ NCC (nhà cung cấp). */
+  debt: number;
+  debtLimit: number | null;
+}
+
+const TEXT = {
+  customer: {
+    label: "Khách hàng",
+    placeholder: "Khách lẻ · tìm tên hoặc SĐT",
+    add: "Thêm khách mới",
+    clear: "Bỏ chọn khách",
+    debt: (n: number) => `Nợ cũ ${formatMoney(n)}`,
+    noDebt: "Không có nợ cũ",
+    optionDebt: (n: number) => `Nợ ${formatMoney(n)}`,
+    empty: "Không tìm thấy khách. Bấm + để thêm khách mới.",
+    dialogTitle: "Thêm khách mới",
+    nameLabel: "Tên khách",
+    namePlaceholder: "Ví dụ: Chị Lan",
+  },
+  supplier: {
+    label: "Nhà cung cấp",
+    placeholder: "Tìm tên hoặc SĐT nhà cung cấp",
+    add: "Thêm nhà cung cấp mới",
+    clear: "Đổi nhà cung cấp",
+    debt: (n: number) => `Mình đang nợ ${formatMoney(n)}`,
+    noDebt: "Không nợ nhà cung cấp này",
+    optionDebt: (n: number) => `Đang nợ ${formatMoney(n)}`,
+    empty: "Không tìm thấy nhà cung cấp. Bấm + để thêm mới.",
+    dialogTitle: "Thêm nhà cung cấp",
+    nameLabel: "Tên nhà cung cấp",
+    namePlaceholder: "Ví dụ: Đại lý Hưng Thịnh",
+  },
+} as const;
+
+function toPicked(c: ContactItem): PickedContact {
   return {
     id: c.id,
     code: c.code,
@@ -27,14 +71,17 @@ function toCartCustomer(c: ContactItem): CartCustomer {
   };
 }
 
-/** Chọn khách cho hóa đơn: tìm theo tên/SĐT, hiện nợ cũ, tạo khách mới ngay tại chỗ. */
-export function CustomerPicker({
-  customer,
+/** Chọn khách hàng / nhà cung cấp: tìm theo tên/SĐT, hiện nợ hiện tại, tạo mới ngay tại chỗ. */
+export function ContactPicker({
+  kind,
+  contact,
   onChange,
 }: {
-  customer: CartCustomer | null;
-  onChange: (customer: CartCustomer | null) => void;
+  kind: ContactType;
+  contact: PickedContact | null;
+  onChange: (contact: PickedContact | null) => void;
 }) {
+  const text = TEXT[kind];
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -43,11 +90,11 @@ export function CustomerPicker({
   const listId = useId();
   const labelId = useId();
   const debounced = useDebouncedValue(query.trim(), 250);
-  const search = useCustomerSearch(debounced, open && !customer);
+  const search = useContactSearch(kind, debounced, open && !contact);
   const options = (search.data ?? []).filter((c) => c.isActive);
 
-  function choose(c: ContactItem | CartCustomer) {
-    onChange("type" in c ? toCartCustomer(c) : c);
+  function choose(c: ContactItem | PickedContact) {
+    onChange("type" in c ? toPicked(c) : c);
     setQuery("");
     setOpen(false);
   }
@@ -69,18 +116,18 @@ export function CustomerPicker({
     }
   }
 
-  if (customer) {
+  if (contact) {
     return (
       <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-medium text-ink-body">Khách hàng</span>
+        <span className="text-[13px] font-medium text-ink-body">{text.label}</span>
         <div className="flex min-h-[52px] items-center gap-2.5 rounded-control border border-line-input py-1 pr-1 pl-3">
           <div className="min-w-0 flex-1 leading-snug">
-            <div className="truncate text-sm font-semibold">{contactLabel(customer)}</div>
-            <div className={cn("text-[13px]", customer.debt > 0 ? "text-warn" : "text-ink-muted")}>
-              {customer.debt > 0 ? `Nợ cũ ${formatMoney(customer.debt)}` : "Không có nợ cũ"}
+            <div className="truncate text-sm font-semibold">{contactLabel(contact)}</div>
+            <div className={cn("text-[13px]", contact.debt > 0 ? "text-warn" : "text-ink-muted")}>
+              {contact.debt > 0 ? text.debt(contact.debt) : text.noDebt}
             </div>
           </div>
-          <IconButton label="Bỏ chọn khách" onClick={() => onChange(null)}>
+          <IconButton label={text.clear} onClick={() => onChange(null)}>
             <CloseIcon size={16} />
           </IconButton>
         </div>
@@ -97,7 +144,7 @@ export function CustomerPicker({
         htmlFor={`${listId}-input`}
         className="text-[13px] font-medium text-ink-body"
       >
-        Khách hàng
+        {text.label}
       </label>
       <div className="relative flex gap-2">
         <Input
@@ -109,7 +156,7 @@ export function CustomerPicker({
           aria-autocomplete="list"
           aria-activedescendant={activeOptionId}
           autoComplete="off"
-          placeholder="Khách lẻ · tìm tên hoặc SĐT"
+          placeholder={text.placeholder}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -122,7 +169,7 @@ export function CustomerPicker({
           leading={<SearchIcon size={18} />}
           frameClassName="flex-1"
         />
-        <IconButton label="Thêm khách mới" variant="secondary" onClick={() => setCreating(true)}>
+        <IconButton label={text.add} variant="secondary" onClick={() => setCreating(true)}>
           <PlusIcon size={18} />
         </IconButton>
 
@@ -156,21 +203,22 @@ export function CustomerPicker({
                 </span>
                 {c.debt > 0 && (
                   <span className="shrink-0 text-[13px] font-semibold text-warn tabular-nums">
-                    Nợ {formatMoney(c.debt)}
+                    {text.optionDebt(c.debt)}
                   </span>
                 )}
               </li>
             ))}
             {options.length === 0 && (
               <li role="presentation" className="px-3 py-3 text-sm text-ink-muted">
-                {search.isFetching ? "Đang tìm…" : "Không tìm thấy khách. Bấm + để thêm khách mới."}
+                {search.isFetching ? "Đang tìm…" : text.empty}
               </li>
             )}
           </ul>
         )}
       </div>
 
-      <QuickCustomerDialog
+      <QuickContactDialog
+        kind={kind}
         open={creating}
         initialQuery={query}
         onClose={() => setCreating(false)}
@@ -186,20 +234,22 @@ export function CustomerPicker({
 type QuickInput = z.input<typeof quickCustomerSchema>;
 type QuickOutput = z.output<typeof quickCustomerSchema>;
 
-function QuickCustomerDialog(props: QuickCustomerDialogProps) {
+function QuickContactDialog(props: QuickContactDialogProps) {
   // Mỗi lần mở là một form mới, điền sẵn từ chữ đang gõ ở ô tìm.
-  return props.open ? <QuickCustomerForm {...props} /> : null;
+  return props.open ? <QuickContactForm {...props} /> : null;
 }
 
-interface QuickCustomerDialogProps {
+interface QuickContactDialogProps {
+  kind: ContactType;
   open: boolean;
   initialQuery: string;
   onClose: () => void;
-  onCreated: (c: CartCustomer) => void;
+  onCreated: (c: PickedContact) => void;
 }
 
-function QuickCustomerForm({ initialQuery, onClose, onCreated }: QuickCustomerDialogProps) {
-  const create = useCreateCustomer();
+function QuickContactForm({ kind, initialQuery, onClose, onCreated }: QuickContactDialogProps) {
+  const text = TEXT[kind];
+  const create = useCreateContact(kind);
   const formId = useId();
   const q = initialQuery.trim();
   const isPhone = /^[\d\s.]+$/.test(q);
@@ -208,14 +258,14 @@ function QuickCustomerForm({ initialQuery, onClose, onCreated }: QuickCustomerDi
     handleSubmit,
     formState: { errors },
   } = useForm<QuickInput, unknown, QuickOutput>({
-    resolver: zodResolver(quickCustomerSchema),
+    resolver: zodResolver(kind === "customer" ? quickCustomerSchema : quickSupplierSchema),
     defaultValues: { name: isPhone ? "" : q, phone: isPhone ? q : "" },
   });
 
   const onSubmit = handleSubmit((values) =>
     create.mutate(
       { name: values.name, phone: values.phone },
-      { onSuccess: (c) => onCreated(toCartCustomer(c)) },
+      { onSuccess: (c) => onCreated(toPicked(c)) },
     ),
   );
 
@@ -223,7 +273,7 @@ function QuickCustomerForm({ initialQuery, onClose, onCreated }: QuickCustomerDi
     <Dialog
       open
       onClose={onClose}
-      title="Thêm khách mới"
+      title={text.dialogTitle}
       size="sm"
       footer={
         <>
@@ -237,8 +287,8 @@ function QuickCustomerForm({ initialQuery, onClose, onCreated }: QuickCustomerDi
       }
     >
       <form id={formId} onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-        <Field label="Tên khách" required error={errors.name?.message}>
-          <Input autoComplete="off" placeholder="Ví dụ: Chị Lan" {...register("name")} />
+        <Field label={text.nameLabel} required error={errors.name?.message}>
+          <Input autoComplete="off" placeholder={text.namePlaceholder} {...register("name")} />
         </Field>
         <Field label="Số điện thoại" error={errors.phone?.message}>
           <Input type="tel" inputMode="tel" autoComplete="off" {...register("phone")} />

@@ -158,3 +158,24 @@ export const InboxIcon = (p: IconProps) => (
     <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
   </Icon>
 );
+
+export const TrashIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 7h16" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+    <path d="M6 7l1 13h10l1-13" />
+    <path d="M9 7V4h6v3" />
+  </Icon>
+);
+
+export const BarcodeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 6v12" />
+    <path d="M8 6v12" />
+    <path d="M11 6v12" />
+    <path d="M15 6v12" />
+    <path d="M18 6v12" />
+    <path d="M20.5 6v12" />
+  </Icon>
+);

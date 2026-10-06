@@ -10,7 +10,8 @@ export interface QtyInputProps extends Omit<
 > {
   /** Số lượng dạng milli (1,5 → 1500); null khi ô trống hoặc gõ chưa hợp lệ. */
   value: number | null;
-  onChange: (milli: number | null) => void;
+  /** `text`: chữ đang có trong ô, để phân biệt ô trống (null hợp lệ) với gõ chưa hợp lệ. */
+  onChange: (milli: number | null, text: string) => void;
   /** Số lượng lớn nhất (milli). */
   max?: number;
 }
@@ -56,7 +57,7 @@ export function QtyInput({
     const next = parseQty(nextText.replace(/\.$/, ""));
     if (next !== null && next > max) return;
     setText(nextText);
-    onChange(next);
+    onChange(next, nextText);
   }
 
   function handleBlur(e: FocusEvent<HTMLInputElement>) {

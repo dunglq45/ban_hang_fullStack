@@ -6,11 +6,12 @@ import { call, callWithStatus } from "./errors";
 import {
   AFTER_SALE_INVALIDATE,
   contactQueryKey,
-  customerSearchQueryKey,
+  contactSearchQueryKey,
   posProductsQueryKey,
 } from "./keys";
 
 export type PosProduct = InferResponseType<typeof api.products.pos.$get, 200>["items"][number];
+export type ContactType = "customer" | "supplier";
 export type ContactItem = InferResponseType<typeof api.contacts.$get, 200>["items"][number];
 export type SaleDocument = InferResponseType<typeof api.sales.$post, 201>;
 export type LookupResult = InferResponseType<typeof api.products.lookup.$get, 200>;
@@ -24,15 +25,15 @@ export function usePosProducts() {
   });
 }
 
-/** Tìm khách theo tên, mã hoặc SĐT (server tìm không dấu). */
-export function useCustomerSearch(q: string, enabled: boolean) {
+/** Tìm khách hàng / nhà cung cấp theo tên, mã hoặc SĐT (server tìm không dấu). */
+export function useContactSearch(type: ContactType, q: string, enabled: boolean) {
   return useQuery({
-    queryKey: customerSearchQueryKey(q),
+    queryKey: contactSearchQueryKey(type, q),
     queryFn: async () =>
       (
         await call(
           api.contacts.$get({
-            query: { type: "customer", q: q || undefined, pageSize: "8", sort: "name" },
+            query: { type, q: q || undefined, pageSize: "8", sort: "name" },
           }),
         )
       ).items,
@@ -50,14 +51,14 @@ export function useContact(id: string | null) {
   });
 }
 
-export function useCreateCustomer() {
+export function useCreateContact(type: ContactType) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { name: string; phone: string | null }) =>
       call(
         api.contacts.$post({
           json: {
-            type: "customer",
+            type,
             name: input.name,
             phone: input.phone,
             address: null,

@@ -79,7 +79,7 @@ export function ProductCatalog({
         onKeyDown={handleKeyDown}
         leading={<SearchIcon size={18} />}
         trailing={<Kbd className="mr-2 hidden md:inline">F3</Kbd>}
-        data-pos-search=""
+        data-scan-search=""
       />
 
       {categories.length > 0 && (

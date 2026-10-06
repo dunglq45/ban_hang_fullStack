@@ -9,6 +9,7 @@ import { ChevronRightIcon } from "../../components/ui/icons";
 import { Spinner } from "../../components/ui/Spinner";
 import { useToast } from "../../components/ui/toast-context";
 import { formatMoney } from "../../lib/format";
+import { useBarcodeScanner } from "../../lib/use-barcode-scanner";
 import {
   addProduct,
   baseQtyByProduct,
@@ -21,7 +22,6 @@ import { usePos } from "./pos-context";
 import { filterProducts, findExact } from "./product-search";
 import { ProductCatalog } from "./ProductCatalog";
 import { blockIfInvalidField } from "./invalid-field";
-import { useBarcodeScanner } from "./use-barcode-scanner";
 
 const isDesktop = () => window.matchMedia?.("(min-width: 768px)").matches ?? true;
 

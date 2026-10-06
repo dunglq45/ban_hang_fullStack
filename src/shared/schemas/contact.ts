@@ -52,4 +52,10 @@ export const quickCustomerSchema = z.object({
   phone: optionalPhone(),
 });
 
+/** Tạo nhanh nhà cung cấp ở màn Nhập hàng: chỉ tên và SĐT. */
+export const quickSupplierSchema = z.object({
+  name: requiredText("tên nhà cung cấp", 200),
+  phone: optionalPhone(),
+});
+
 export type QuickCustomerInput = z.input<typeof quickCustomerSchema>;

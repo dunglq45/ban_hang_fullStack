@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { GuestOnly, HOME_PATH, RequireAuth, RequireOwner } from "./features/auth/guards";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
+import { DocumentListPage } from "./features/documents/DocumentListPage";
 import { NotFoundPage, PlaceholderPage } from "./features/placeholder/PlaceholderPage";
 import { MobileCheckoutPage } from "./features/pos/MobileCheckoutPage";
 import { ProductDetailPage } from "./features/products/ProductDetailPage";
@@ -10,6 +11,8 @@ import { ProductFormPage } from "./features/products/ProductFormPage";
 import { ProductListPage } from "./features/products/ProductListPage";
 import { PosPage } from "./features/pos/PosPage";
 import { PosProvider } from "./features/pos/PosProvider";
+import { PurchaseFormPage } from "./features/purchases/PurchaseFormPage";
+import { StockCountPage } from "./features/stock-counts/StockCountPage";
 import type { PageMeta } from "./lib/page-meta";
 
 function meta(section: string, title: string): PageMeta {
@@ -55,7 +58,12 @@ export const routes: RouteObject[] = [
             handle: meta("Hàng hóa", "Chi tiết hàng hóa"),
             element: <ProductDetailPage />,
           },
-          page("/kiem-kho/:id", "Hàng hóa", "Kiểm kho"),
+          // Nhân viên được đếm (xem, ghi số, quét); tạo và hoàn thành phiếu chỉ chủ cửa hàng.
+          {
+            path: "/kiem-kho/:id",
+            handle: meta("Hàng hóa", "Kiểm kho"),
+            element: <StockCountPage />,
+          },
           page("/so-no", "Vận hành", "Sổ nợ"),
           page("/so-no/:contactId", "Sổ nợ", "Chi tiết công nợ"),
           page("/cai-dat", "Hệ thống", "Cài đặt"),
@@ -72,8 +80,26 @@ export const routes: RouteObject[] = [
                 handle: meta("Hàng hóa", "Sửa hàng hóa"),
                 element: <ProductFormPage />,
               },
-              page("/nhap-hang/moi", "Hàng hóa", "Nhập hàng"),
-              page("/nhap-hang/:id", "Hàng hóa", "Phiếu nhập hàng"),
+              {
+                path: "/nhap-hang",
+                handle: meta("Hàng hóa", "Nhập hàng"),
+                element: <DocumentListPage key="purchase" kind="purchase" />,
+              },
+              {
+                path: "/nhap-hang/moi",
+                handle: meta("Hàng hóa / Nhập hàng", "Tạo phiếu nhập hàng"),
+                element: <PurchaseFormPage />,
+              },
+              {
+                path: "/nhap-hang/:id",
+                handle: meta("Hàng hóa / Nhập hàng", "Phiếu nhập hàng"),
+                element: <PurchaseFormPage />,
+              },
+              {
+                path: "/kiem-kho",
+                handle: meta("Hàng hóa", "Kiểm kho"),
+                element: <DocumentListPage key="count" kind="count" />,
+              },
               page("/tong-quan", "Báo cáo", "Tổng quan"),
             ],
           },
