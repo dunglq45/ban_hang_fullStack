@@ -7,7 +7,9 @@
   "compatibility_date": "2026-08-22",
   // Chưa thư viện nào cần nodejs_compat (Hono, Drizzle D1, WebCrypto đều chạy native).
   "compatibility_flags": [],
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true,
+  },
   "assets": {
     // Vite plugin tự điền "directory" bằng thư mục build của client.
     "not_found_handling": "single-page-application",
@@ -18,18 +20,34 @@
       "binding": "DB",
       "database_name": "store-app-db",
       // Thay bằng database_id in ra sau khi chạy: pnpm wrangler d1 create store-app-db
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "86fd6162-ac4b-42d5-ab92-c4ad4d47d296",
       "migrations_dir": "migrations",
     },
   ],
   // Giới hạn tần suất theo IP cho đăng ký/đăng nhập (chống spam tạo cửa hàng và dò mật khẩu
   // trên nhiều SĐT). namespace_id là số tự chọn, duy nhất trong tài khoản Cloudflare.
   "ratelimits": [
-    { "name": "REGISTER_LIMITER", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } },
-    { "name": "LOGIN_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } },
+    {
+      "name": "REGISTER_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 5,
+        "period": 60,
+      },
+    },
+    {
+      "name": "LOGIN_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 20,
+        "period": 60,
+      },
+    },
   ],
   // Dọn login_attempts quá hạn và phiên hết hạn mỗi ngày lúc 03:00 giờ Việt Nam (20:00 UTC).
-  "triggers": { "crons": ["0 20 * * *"] },
+  "triggers": {
+    "crons": ["0 20 * * *"],
+  },
   "r2_buckets": [
     {
       "binding": "IMAGES",
@@ -38,7 +56,6 @@
   ],
   // Tên miền riêng cho production: bỏ comment và thay tên miền (xem docs/VAN-HANH.md).
   // "routes": [{ "pattern": "app.ten-mien-cua-ban.vn", "custom_domain": true }],
-
   // Môi trường thử nghiệm: Worker riêng "store-app-preview" với D1/R2 riêng (không đụng dữ liệu
   // thật). Build bằng `pnpm build:preview` (CLOUDFLARE_ENV=preview), deploy `pnpm run deploy:preview`.
   // Binding (D1, R2, rate limit) không kế thừa từ cấp trên nên phải khai báo lại đủ.
@@ -49,6 +66,7 @@
           "binding": "DB",
           "database_name": "store-app-db-preview",
           // Thay bằng database_id in ra sau khi chạy: pnpm wrangler d1 create store-app-db-preview
+          // (CHƯA tạo — khác database_id của production ở trên; không dùng chung một database).
           "database_id": "00000000-0000-0000-0000-000000000000",
           "migrations_dir": "migrations",
         },
@@ -57,15 +75,23 @@
         {
           "name": "REGISTER_LIMITER",
           "namespace_id": "2001",
-          "simple": { "limit": 5, "period": 60 },
+          "simple": {
+            "limit": 5,
+            "period": 60,
+          },
         },
         {
           "name": "LOGIN_LIMITER",
           "namespace_id": "2002",
-          "simple": { "limit": 20, "period": 60 },
+          "simple": {
+            "limit": 20,
+            "period": 60,
+          },
         },
       ],
-      "triggers": { "crons": ["0 20 * * *"] },
+      "triggers": {
+        "crons": ["0 20 * * *"],
+      },
       "r2_buckets": [
         {
           "binding": "IMAGES",
