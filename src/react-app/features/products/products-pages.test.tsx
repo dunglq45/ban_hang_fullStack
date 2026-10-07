@@ -126,8 +126,14 @@ describe("danh sách hàng hóa", () => {
 
     await user.type(screen.getByRole("searchbox", { name: "Tìm hàng hóa" }), "nuoc mam");
     await waitFor(() => expect(router.state.location.search).toContain("q=nuoc+mam"));
-    const calls = fetchMock.mock.calls.map(([url]) => String(url));
-    expect(calls.some((u) => u.includes("/api/products?") && u.includes("q=nuoc+mam"))).toBe(true);
+    // URL cập nhật ngay khi router nhận navigate, nhưng component có thể chưa kịp render lại và
+    // gọi API với q mới (nhất là khi máy đang chạy nhiều test song song) — đợi thêm ở đây.
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.map(([url]) => String(url));
+      expect(calls.some((u) => u.includes("/api/products?") && u.includes("q=nuoc+mam"))).toBe(
+        true,
+      );
+    });
 
     await user.click(screen.getByRole("tab", { name: /Hết hàng/ }));
     expect(router.state.location.search).toContain("status=out");

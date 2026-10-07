@@ -22,10 +22,10 @@ export const paymentRoutes = new Hono<AuthEnv>()
     return c.json(result.payment, result.replayed ? 200 : 201);
   })
   .get("/:id", validate("param", idParamSchema), async (c) =>
-    c.json(await getPayment(c.get("db"), c.req.valid("param").id)),
+    c.json(await getPayment(c.get("db"), c.get("user").role, c.req.valid("param").id)),
   )
   .post("/:id/cancel", requireOwner, validate("param", idParamSchema), async (c) =>
-    c.json(await cancelPayment(c.get("db"), c.req.valid("param").id)),
+    c.json(await cancelPayment(c.get("db"), c.get("user").role, c.req.valid("param").id)),
   );
 
 export const debtRoutes = new Hono<AuthEnv>()

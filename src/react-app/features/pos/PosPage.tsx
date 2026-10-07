@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { errorMessage } from "../../api/errors";
 import { useCategories } from "../../api/categories";
 import { lookupBarcode, usePosProducts } from "../../api/pos";
+import { TAB_BAR_CLEARANCE } from "../../components/layout/MobileTabBar";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { ChevronRightIcon } from "../../components/ui/icons";
@@ -213,7 +214,7 @@ function MobileCartBar() {
       <div className="h-20 md:hidden" aria-hidden="true" />
       <div
         className="fixed inset-x-0 z-30 border-t border-line bg-white px-3 py-2.5 md:hidden"
-        style={{ bottom: "calc(69px + max(0px, env(safe-area-inset-bottom) - 10px))" }}
+        style={{ bottom: TAB_BAR_CLEARANCE }}
       >
         <Link
           to="/ban-hang/thanh-toan"

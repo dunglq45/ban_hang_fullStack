@@ -28,6 +28,7 @@ import {
   useProduct,
   useUpdateProduct,
 } from "../../api/products";
+import { TAB_BAR_CLEARANCE } from "../../components/layout/MobileTabBar";
 import { Alert } from "../../components/ui/Alert";
 import { Button, IconButton } from "../../components/ui/Button";
 import { buttonClass } from "../../components/ui/button-class";
@@ -176,7 +177,7 @@ function ProductForm({ mode, product }: { mode: FormMode; product?: ProductDetai
   const backTo = product ? `/hang-hoa/${product.id}` : "/hang-hoa";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 pb-28 md:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to={backTo}
@@ -185,7 +186,12 @@ function ProductForm({ mode, product }: { mode: FormMode; product?: ProductDetai
           <ChevronLeftIcon size={18} />
           {product ? `Quay lại ${product.name}` : "Quay lại danh sách hàng hóa"}
         </Link>
-        <div className="flex flex-wrap gap-2">
+        {/* Cố định đáy màn hình trên điện thoại (trên thanh tab dưới) để không phải cuộn lên đầu
+            trang dài mới bấm được "Lưu"; giữ nguyên ở đầu trang trong luồng ở máy tính. */}
+        <div
+          className="fixed inset-x-0 z-30 flex flex-wrap gap-2 border-t border-line bg-white px-4 py-2.5 md:static md:border-0 md:bg-transparent md:px-0 md:py-0"
+          style={{ bottom: TAB_BAR_CLEARANCE }}
+        >
           <Link to={backTo} className={buttonClass({ variant: "secondary" })}>
             Hủy
           </Link>

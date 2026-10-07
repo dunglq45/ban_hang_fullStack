@@ -5,7 +5,7 @@ import type { z } from "zod";
 import { formatVnd } from "../../shared/money";
 import type { createPaymentSchema } from "../../shared/schemas/payment";
 import type { StoreDb } from "../db/client";
-import type { ContactType, CounterKind, PaymentType } from "../db/schema";
+import type { ContactType, CounterKind, PaymentType, UserRole } from "../db/schema";
 import { isConstraintError } from "../lib/db-errors";
 import { AppError } from "../lib/errors";
 import { isGuardError } from "../lib/guard";
@@ -20,10 +20,18 @@ const CONTACT_OF: Record<PaymentType, ContactType> = {
 };
 const CODE_KIND: Record<PaymentType, CounterKind> = { receipt: "PT", disbursement: "PC" };
 
+/** Staff chỉ xem phiếu thu: phiếu chi trả nợ NCC ngoài phạm vi thu nợ của staff (quy tắc 8). */
+function assertCanView(role: UserRole, type: PaymentType) {
+  if (role !== "owner" && type === "disbursement") {
+    throw new AppError("FORBIDDEN", "Bạn chỉ xem được phiếu thu");
+  }
+}
+
 /** Phiếu đầy đủ để hiển thị và in: đối tác (nợ hiện tại), người lập, dư nợ ngay sau phiếu, cửa hàng. */
-export async function getPayment(db: StoreDb, id: string) {
+export async function getPayment(db: StoreDb, role: UserRole, id: string) {
   const row = await db.payments.detail(id);
   if (!row) throw new AppError("NOT_FOUND", "Không tìm thấy phiếu thu / chi");
+  assertCanView(role, row.type);
   const store = await db.store.get();
   const {
     contactCode,
@@ -65,13 +73,18 @@ export interface PaymentResult {
   replayed: boolean;
 }
 
-async function replay(db: StoreDb, key: string, type: PaymentType): Promise<PaymentResult | null> {
+async function replay(
+  db: StoreDb,
+  role: UserRole,
+  key: string,
+  type: PaymentType,
+): Promise<PaymentResult | null> {
   const existing = await db.payments.findByIdempotencyKey(key);
   if (existing) {
     if (existing.type !== type) {
       throw new AppError("IDEMPOTENCY_CONFLICT", "Mã chống gửi trùng đã dùng cho phiếu khác");
     }
-    return { payment: await getPayment(db, existing.id), replayed: true };
+    return { payment: await getPayment(db, role, existing.id), replayed: true };
   }
   // Khóa của client là duy nhất cho mọi thao tác ghi: trùng với một chứng từ là lỗi phía client.
   if (await db.documents.findByIdempotencyKey(key)) {
@@ -100,7 +113,7 @@ export async function createPayment(
   if (input.type === "disbursement" && actor.role !== "owner") {
     throw new AppError("FORBIDDEN", "Chỉ chủ cửa hàng được lập phiếu chi trả nợ nhà cung cấp");
   }
-  const previous = await replay(db, input.idempotencyKey, input.type);
+  const previous = await replay(db, actor.role, input.idempotencyKey, input.type);
   if (previous) return previous;
 
   const contact = await db.contacts.findById(input.contactId);
@@ -147,7 +160,7 @@ export async function createPayment(
     ]);
   } catch (err) {
     if (isConstraintError(err, "UNIQUE", "payments.idempotency_key")) {
-      const again = await replay(db, input.idempotencyKey, input.type);
+      const again = await replay(db, actor.role, input.idempotencyKey, input.type);
       if (again) return again;
     }
     if (isGuardError(err)) {
@@ -157,11 +170,11 @@ export async function createPayment(
     }
     throw err;
   }
-  return { payment: await getPayment(db, id), replayed: false };
+  return { payment: await getPayment(db, actor.role, id), replayed: false };
 }
 
 /** Hủy phiếu thu/chi (owner): cộng lại nợ bằng đúng số tiền của phiếu, ghi sổ nợ dòng dương. */
-export async function cancelPayment(db: StoreDb, id: string) {
+export async function cancelPayment(db: StoreDb, role: UserRole, id: string) {
   const payment = await db.payments.findById(id);
   if (!payment) throw new AppError("NOT_FOUND", "Không tìm thấy phiếu thu / chi");
   if (payment.status === "cancelled") {
@@ -187,5 +200,5 @@ export async function cancelPayment(db: StoreDb, id: string) {
     }
     throw err;
   }
-  return getPayment(db, id);
+  return getPayment(db, role, id);
 }

@@ -3,6 +3,12 @@ import { useSession } from "../../api/auth";
 import { cn } from "../../lib/cn";
 import { isActive, MOBILE_TABS, visibleItems } from "./nav";
 
+/**
+ * Chiều cao thanh tab dưới (điện thoại): dùng làm khoảng hở đáy cho mọi thanh `fixed` khác đặt
+ * ngay trên nó (giỏ hàng POS, nút chính của form dài...).
+ */
+export const TAB_BAR_CLEARANCE = "calc(69px + max(0px, env(safe-area-inset-bottom) - 10px))";
+
 /** Thanh tab dưới cùng cho màn hình < 768px (thay cho Sidebar). */
 export function MobileTabBar() {
   const { user } = useSession();

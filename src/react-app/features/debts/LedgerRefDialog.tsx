@@ -12,6 +12,7 @@ import { Dialog } from "../../components/ui/Dialog";
 import { Spinner } from "../../components/ui/Spinner";
 import { Table, TBody, TD, TH, THead, TR } from "../../components/ui/Table";
 import { formatDateTime, formatMoney, formatQty } from "../../lib/format";
+import { InvoiceDialog } from "../documents/InvoiceDialog";
 import { METHOD_TEXT } from "./debt-utils";
 
 export type LedgerRef = {
@@ -28,8 +29,11 @@ const DOC_TITLE: Record<string, string> = {
   stock_count: "Phiếu kiểm kho",
 };
 
-/** Bấm mã chứng từ trong sổ nợ: xem nhanh hóa đơn / phiếu nhập / phiếu thu chi. */
+/** Bấm mã chứng từ trong sổ nợ: xem nhanh hóa đơn (kèm in lại, hủy) / phiếu nhập / phiếu thu chi. */
 export function LedgerRefDialog({ target, onClose }: { target: LedgerRef; onClose: () => void }) {
+  if (target.kind === "document" && target.type === "sale") {
+    return <InvoiceDialog id={target.id} onClose={onClose} />;
+  }
   return target.kind === "document" ? (
     <DocumentPreview id={target.id} type={target.type} onClose={onClose} />
   ) : (
@@ -82,16 +86,6 @@ function DocumentPreview({
             <Link to={`/nhap-hang/${doc.id}`} className={buttonClass({ variant: "secondary" })}>
               Mở phiếu nhập
             </Link>
-          )}
-          {doc?.type === "sale" && (
-            <a
-              href={`/in/hoa-don/${doc.id}`}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonClass({ variant: "secondary" })}
-            >
-              In hóa đơn
-            </a>
           )}
           <Button onClick={onClose}>Đóng</Button>
         </>

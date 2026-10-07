@@ -36,3 +36,14 @@ export const updateUserSchema = z
 export type UpdateStoreInput = z.input<typeof updateStoreSchema>;
 export type CreateUserInput = z.input<typeof createUserSchema>;
 export type UpdateUserInput = z.input<typeof updateUserSchema>;
+
+/** Form sửa nhân viên trên giao diện (tên, vai trò); gửi qua PATCH /api/users/:id. */
+export const editUserFormSchema = z.object({
+  name: requiredText("tên nhân viên", 100),
+  role: roleSchema,
+});
+
+/** Form chủ đặt lại mật khẩu cho nhân viên. */
+export const resetPasswordFormSchema = z.object({ password: passwordSchema });
+
+export type EditUserFormInput = z.input<typeof editUserFormSchema>;

@@ -18,7 +18,7 @@ import { PlusIcon, SearchIcon } from "../../components/ui/icons";
 import { Input } from "../../components/ui/Input";
 import { Pagination } from "../../components/ui/Pagination";
 import { Select } from "../../components/ui/Select";
-import { Spinner } from "../../components/ui/Spinner";
+import { TableSkeleton } from "../../components/ui/Skeleton";
 import { StatusDot } from "../../components/ui/StatusDot";
 import { Table, TBody, TD, TH, THead, TR } from "../../components/ui/Table";
 import { Tabs } from "../../components/ui/Tabs";
@@ -275,9 +275,25 @@ export function ProductListPage() {
 
         <div className="border-t border-line">
           {list.isPending ? (
-            <div className="flex justify-center py-16">
-              <Spinner size={28} label="Đang tải danh sách hàng hóa" className="text-primary" />
-            </div>
+            <Table aria-label="Đang tải danh sách hàng hóa" minWidth={isOwner ? 940 : 820}>
+              <THead>
+                <TR>
+                  {isOwner && <TH className="w-11 pr-0" />}
+                  <TH>Mã hàng</TH>
+                  <TH>Tên hàng</TH>
+                  <TH>Nhóm</TH>
+                  <TH>Đơn vị</TH>
+                  {isOwner && <TH numeric>Giá vốn</TH>}
+                  <TH numeric>Giá bán</TH>
+                  <TH numeric>Tồn kho</TH>
+                  <TH>Trạng thái</TH>
+                  <TH>
+                    <span className="sr-only">Thao tác</span>
+                  </TH>
+                </TR>
+              </THead>
+              <TableSkeleton columns={isOwner ? 10 : 8} />
+            </Table>
           ) : list.isError ? (
             <div className="p-4">
               <Alert>{errorMessage(list.error)}</Alert>

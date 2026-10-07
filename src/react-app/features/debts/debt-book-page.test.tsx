@@ -376,7 +376,7 @@ describe("Sổ nợ", () => {
     ).toBeInTheDocument();
     expect(posted).toMatchObject({ type: "disbursement", contactId: "ncc-1", amount: 2_000_000 });
     expect(open).toHaveBeenCalledOnce();
-    expect(printWindow.location.href).toBe("/in/phieu-chi/pc-9");
+    expect(printWindow.location.href).toBe("/in/phieu-chi/pc-9?auto=1");
     open.mockRestore();
     localStorage.clear();
   });

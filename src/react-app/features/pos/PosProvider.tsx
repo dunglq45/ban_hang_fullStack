@@ -24,17 +24,8 @@ import {
   toSaleInput,
 } from "./cart";
 import { PosContext, type PosContextValue } from "./pos-context";
+import { loadPosPrint, savePosPrint } from "./print-preference";
 import { loadTabs, posTabsReducer, type PosTabsAction, saveTabs, storageKey } from "./pos-tabs";
-
-const PRINT_KEY = "pos:print";
-
-function loadPrint() {
-  try {
-    return localStorage.getItem(PRINT_KEY) !== "0";
-  } catch {
-    return true;
-  }
-}
 
 /**
  * Route bọc màn Bán hàng (/ban-hang và /ban-hang/thanh-toan): giữ các hóa đơn đang mở (lưu
@@ -50,7 +41,7 @@ export function PosProvider() {
 function PosProviderInner({ storageKey: key }: { storageKey: string }) {
   const { user } = useSession();
   const [state, rawDispatch] = useReducer(posTabsReducer, key, loadTabs);
-  const [print, setPrintState] = useState(loadPrint);
+  const [print, setPrintState] = useState(loadPosPrint);
   const [debtPrompt, setDebtPrompt] = useState<string | null>(null);
   /** Hóa đơn đang gửi lên server: khóa sửa cho tới khi có kết quả. */
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -116,11 +107,7 @@ function PosProviderInner({ storageKey: key }: { storageKey: string }) {
 
   const setPrint = useCallback((value: boolean) => {
     setPrintState(value);
-    try {
-      localStorage.setItem(PRINT_KEY, value ? "1" : "0");
-    } catch {
-      // Không lưu được lựa chọn: lần sau mặc định lại là in.
-    }
+    savePosPrint(value);
   }, []);
 
   const { mutate } = createSale;
@@ -159,7 +146,7 @@ function PosProviderInner({ storageKey: key }: { storageKey: string }) {
               ? { tone: "info", message: `Hóa đơn ${document.code} đã được lưu trước đó` }
               : `Đã bán ${document.code}`,
           );
-          if (printWindow) printWindow.location.href = `/in/hoa-don/${document.id}`;
+          if (printWindow) printWindow.location.href = `/in/hoa-don/${document.id}?auto=1`;
           if (location.pathname !== "/ban-hang") navigate("/ban-hang");
         },
         onError: (err) => {

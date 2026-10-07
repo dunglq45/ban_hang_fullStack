@@ -32,3 +32,26 @@ export const registerFormSchema = registerSchema
   });
 
 export type RegisterFormInput = z.input<typeof registerFormSchema>;
+
+/** Tự đổi mật khẩu (mọi vai trò): phải nhập đúng mật khẩu hiện tại. */
+export const changePasswordSchema = z.object({
+  currentPassword: z
+    .string({ error: "Vui lòng nhập mật khẩu hiện tại" })
+    .min(1, "Vui lòng nhập mật khẩu hiện tại")
+    .max(128, "Mật khẩu tối đa 128 ký tự"),
+  password: passwordSchema,
+});
+
+export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
+
+/** Form đổi mật khẩu: thêm ô nhập lại mật khẩu mới (không gửi lên server). */
+export const changePasswordFormSchema = changePasswordSchema
+  .extend({
+    confirmPassword: z.string({ error: "Vui lòng nhập lại mật khẩu mới" }),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "Mật khẩu nhập lại không khớp",
+    path: ["confirmPassword"],
+  });
+
+export type ChangePasswordFormInput = z.input<typeof changePasswordFormSchema>;

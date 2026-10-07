@@ -1,7 +1,7 @@
 import { Badge } from "../../components/ui/Badge";
 import { DOCUMENT_STATUS, type DocumentKind, type DocumentStatus } from "./document-status";
 
-/** Nhãn trạng thái phiếu nhập / phiếu kiểm kho. */
+/** Nhãn trạng thái hóa đơn bán / phiếu nhập / phiếu kiểm kho. */
 export function DocumentStatusBadge({
   status,
   kind,

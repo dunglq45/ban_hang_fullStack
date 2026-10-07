@@ -28,6 +28,7 @@ Quy ước:
 | POST | /api/auth/login | `{ phone, password, remember }`, set cookie |
 | POST | /api/auth/logout | 🔒 xóa session |
 | GET | /api/auth/me | 🔒 `{ user, store }` |
+| PUT | /api/auth/password | 🔒 tự đổi mật khẩu (mọi vai trò) `{ currentPassword, password }`; sai mật khẩu hiện tại → `WRONG_PASSWORD`; giữ phiên đang dùng, đăng xuất thiết bị khác |
 
 ## Cửa hàng và nhân viên
 | GET/PUT | /api/store | 🔒👑 thông tin cửa hàng, footer hóa đơn |
@@ -68,7 +69,7 @@ Quy ước:
 
 ## Thu chi
 | POST | /api/payments | 🔒 `{ type, contactId, amount, method, note, idempotencyKey }` (disbursement 👑). receipt: khách hàng, PT; disbursement: NCC, PC. `amount` ≤ nợ hiện tại (`AMOUNT_EXCEEDS_DEBT`). 201 = tạo mới, 200 = idempotencyKey đã dùng |
-| GET | /api/payments/:id | 🔒 phiếu kèm `contact` (nợ hiện tại), `createdBy`, `balanceAfter` (dư nợ ngay sau phiếu), `store` (để in) |
+| GET | /api/payments/:id | 🔒 phiếu kèm `contact` (nợ hiện tại), `createdBy`, `balanceAfter` (dư nợ ngay sau phiếu), `store` (để in); staff chỉ xem phiếu thu (disbursement → `FORBIDDEN`) |
 | POST | /api/payments/:id/cancel | 🔒👑 cộng lại nợ, ghi sổ nợ dòng dương |
 
 ## Kiểm kho

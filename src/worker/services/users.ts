@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { changePasswordSchema } from "../../shared/schemas/auth";
 import type { createUserSchema, updateUserSchema } from "../../shared/schemas/store";
 import type { StoreDb } from "../db/client";
 import { isConstraintError } from "../lib/db-errors";
@@ -87,4 +88,20 @@ export async function updateUser(
     throw new AppError("LAST_OWNER", "Cửa hàng phải còn ít nhất một chủ đang hoạt động");
   }
   throw new AppError("NOT_FOUND", "Không tìm thấy nhân viên");
+}
+
+/**
+ * Tự đổi mật khẩu (mọi vai trò, kể cả nhân viên): cùng quy tắc với `updateUser` cho chính mình
+ * (phải đúng mật khẩu hiện tại, giữ phiên đang dùng, đăng xuất các thiết bị khác).
+ */
+export async function changeOwnPassword(
+  db: StoreDb,
+  actor: SessionUser,
+  actorSessionId: string,
+  input: z.output<typeof changePasswordSchema>,
+) {
+  await updateUser(db, actor, actorSessionId, actor.id, {
+    password: input.password,
+    currentPassword: input.currentPassword,
+  });
 }

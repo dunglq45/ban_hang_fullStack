@@ -20,6 +20,7 @@ import {
   useStockCount,
 } from "../../api/inventory";
 import { stockCountQueryKey } from "../../api/keys";
+import { TAB_BAR_CLEARANCE } from "../../components/layout/MobileTabBar";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
@@ -610,7 +611,10 @@ function CountScreen({ data }: { data: StockCount }) {
               onMouseDown={(e) => {
                 if ((e.target as HTMLElement).closest("button")) e.preventDefault();
               }}
-              className="mt-auto flex flex-col gap-2 rounded-b-card border-t border-line bg-table-head px-4 py-3.5"
+              // Cố định đáy màn hình trên điện thoại (trên thanh tab dưới) để không phải cuộn hết
+              // danh sách dài mới bấm được "Hoàn thành"/"Lưu tạm"; giữ nguyên trong luồng ở máy tính.
+              className="sticky z-10 mt-auto flex flex-col gap-2 rounded-b-card border-t border-line bg-table-head px-4 py-3.5 md:static"
+              style={{ bottom: TAB_BAR_CLEARANCE }}
             >
               {isOwner && (
                 <Button

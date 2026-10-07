@@ -159,3 +159,60 @@ describe("CSRF: có body nhưng không khai báo Content-Type", () => {
     expect(res.status).toBe(415);
   });
 });
+
+describe("PUT /api/auth/password (tự đổi mật khẩu)", () => {
+  it("nhân viên tự đổi được: giữ phiên đang dùng, đăng xuất thiết bị khác, mật khẩu mới dùng được", async () => {
+    const store = await createStore();
+    const staff = await addStaff(store);
+    const other = await login(staff.phone);
+    const res = await staff.api.auth.password.$put({
+      json: { currentPassword: TEST_PASSWORD, password: "mat-khau-moi" },
+    });
+    expect(res.status).toBe(200);
+    expect((await staff.api.auth.me.$get()).status).toBe(200);
+    expect((await client(other).auth.me.$get()).status).toBe(401);
+    const relogin = await client().auth.login.$post({
+      json: { phone: staff.phone, password: "mat-khau-moi", remember: false },
+    });
+    expect(relogin.status).toBe(200);
+  });
+
+  it("chủ cửa hàng cũng tự đổi được qua endpoint này", async () => {
+    const store = await createStore();
+    const res = await store.owner.api.auth.password.$put({
+      json: { currentPassword: TEST_PASSWORD, password: "mat-khau-moi" },
+    });
+    expect(res.status).toBe(200);
+    const relogin = await client().auth.login.$post({
+      json: { phone: store.owner.phone, password: "mat-khau-moi", remember: false },
+    });
+    expect(relogin.status).toBe(200);
+  });
+
+  it("sai mật khẩu hiện tại → WRONG_PASSWORD, mật khẩu cũ vẫn dùng được", async () => {
+    const store = await createStore();
+    const staff = await addStaff(store);
+    const res = await staff.api.auth.password.$put({
+      json: { currentPassword: "sai-mat-khau", password: "mat-khau-moi" },
+    });
+    expect(res.status).toBe(400);
+    expect((await errorOf(res)).code).toBe("WRONG_PASSWORD");
+    await login(staff.phone);
+  });
+
+  it("thiếu mật khẩu hiện tại hoặc mật khẩu mới quá ngắn → VALIDATION_ERROR", async () => {
+    const store = await createStore();
+    const bad = await store.owner.api.auth.password.$put({
+      json: { currentPassword: "", password: "123" },
+    });
+    expect(bad.status).toBe(400);
+    expect((await errorOf(bad)).code).toBe("VALIDATION_ERROR");
+  });
+
+  it("chưa đăng nhập → 401", async () => {
+    const res = await client().auth.password.$put({
+      json: { currentPassword: TEST_PASSWORD, password: "mat-khau-moi" },
+    });
+    expect(res.status).toBe(401);
+  });
+});

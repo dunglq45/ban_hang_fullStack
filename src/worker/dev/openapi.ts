@@ -3,7 +3,7 @@
 // ở bảng ENDPOINTS; test/api/docs.test.ts bảo đảm mọi route của app đều có trong bảng.
 import { z } from "zod";
 import { ERROR_CODES } from "../../shared/errors";
-import { loginSchema, registerSchema } from "../../shared/schemas/auth";
+import { changePasswordSchema, loginSchema, registerSchema } from "../../shared/schemas/auth";
 import { createCategorySchema, updateCategorySchema } from "../../shared/schemas/category";
 import { idParamSchema } from "../../shared/schemas/common";
 import {
@@ -91,6 +91,16 @@ const ENDPOINTS: Endpoint[] = [
     tag: "Auth",
     summary: "Người dùng và cửa hàng hiện tại",
     access: "user",
+  },
+  {
+    method: "put",
+    path: "/auth/password",
+    tag: "Auth",
+    summary: "Tự đổi mật khẩu (mọi vai trò)",
+    description:
+      "Phải đúng mật khẩu hiện tại (sai → `WRONG_PASSWORD`). Giữ phiên đang dùng, đăng xuất các thiết bị khác.",
+    access: "user",
+    body: changePasswordSchema,
   },
 
   // Cửa hàng, nhân viên

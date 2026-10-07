@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import {
   type Category,
   useCategories,
@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/Button";
 import { Dialog } from "../../components/ui/Dialog";
 import { Input } from "../../components/ui/Input";
 import { useToast } from "../../components/ui/toast-context";
+import { cn } from "../../lib/cn";
 import { formatNumber } from "../../lib/format";
 
 /** Thêm, đổi tên, xóa nhóm hàng (chỉ chủ cửa hàng). Nhóm còn hàng thì không xóa được. */
@@ -82,6 +83,7 @@ function CategoryRow({ category }: { category: Category }) {
   const remove = useDeleteCategory();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
+  const countId = useId();
 
   function save(e: FormEvent) {
     e.preventDefault();
@@ -103,6 +105,8 @@ function CategoryRow({ category }: { category: Category }) {
   }
 
   function del() {
+    // Nút vẫn bấm được (không dùng `disabled`) để trình đọc màn hình đọc được lý do qua Tab.
+    if (category.productCount > 0) return;
     remove.mutate(category.id, {
       onSuccess: () => toast(`Đã xóa nhóm "${category.name}"`),
       onError: (err) => setError(errorMessage(err)),
@@ -144,13 +148,22 @@ function CategoryRow({ category }: { category: Category }) {
           <Button variant="ghost" onClick={() => setEditing(true)}>
             Đổi tên
           </Button>
+          {category.productCount > 0 && (
+            <span id={countId} className="sr-only">
+              Nhóm còn {formatNumber(category.productCount)} mặt hàng nên chưa xóa được
+            </span>
+          )}
           <Button
             variant="ghost"
-            className="text-danger"
+            className={cn(
+              "text-danger",
+              category.productCount > 0 && "cursor-not-allowed opacity-50",
+            )}
             loading={remove.isPending}
-            disabled={category.productCount > 0}
             title={category.productCount > 0 ? "Nhóm còn hàng nên chưa xóa được" : undefined}
             aria-label={`Xóa nhóm ${category.name}`}
+            aria-disabled={category.productCount > 0 || undefined}
+            aria-describedby={category.productCount > 0 ? countId : undefined}
             onClick={del}
           >
             Xóa

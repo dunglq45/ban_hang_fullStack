@@ -71,16 +71,28 @@ function toPicked(c: ContactItem): PickedContact {
   };
 }
 
-/** Chọn khách hàng / nhà cung cấp: tìm theo tên/SĐT, hiện nợ hiện tại, tạo mới ngay tại chỗ. */
+const FILTER_PLACEHOLDER = {
+  customer: "Lọc theo khách (tên, SĐT)",
+  supplier: "Lọc theo nhà cung cấp",
+} as const;
+
+/**
+ * Chọn khách hàng / nhà cung cấp: tìm theo tên/SĐT, hiện nợ hiện tại, tạo mới ngay tại chỗ.
+ * `variant="filter"` dùng làm bộ lọc danh sách: không tạo mới, có cả đối tác đã ngừng giao dịch,
+ * nhãn chỉ dành cho trình đọc màn hình, khung cao 44px như các ô lọc khác.
+ */
 export function ContactPicker({
   kind,
   contact,
   onChange,
+  variant = "form",
 }: {
   kind: ContactType;
   contact: PickedContact | null;
   onChange: (contact: PickedContact | null) => void;
+  variant?: "form" | "filter";
 }) {
+  const isFilter = variant === "filter";
   const text = TEXT[kind];
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -91,12 +103,12 @@ export function ContactPicker({
   const labelId = useId();
   const debounced = useDebouncedValue(query.trim(), 250);
   const search = useContactSearch(kind, debounced, open && !contact);
-  const options = (search.data ?? []).filter((c) => c.isActive);
+  const options = (search.data ?? []).filter((c) => isFilter || c.isActive);
 
   function choose(c: ContactItem | PickedContact) {
-    onChange("type" in c ? toPicked(c) : c);
     setQuery("");
     setOpen(false);
+    onChange("type" in c ? toPicked(c) : c);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -114,6 +126,20 @@ export function ContactPicker({
       e.stopPropagation();
       setOpen(false);
     }
+  }
+
+  if (contact && isFilter) {
+    return (
+      <div className="flex h-touch min-w-0 items-center gap-1 rounded-control border border-primary bg-primary-soft pr-0.5 pl-3">
+        <span className="sr-only">{text.label}: </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-primary">
+          {contactLabel(contact)}
+        </span>
+        <IconButton label={`Bỏ lọc ${contact.name}`} onClick={() => onChange(null)}>
+          <CloseIcon size={16} />
+        </IconButton>
+      </div>
+    );
   }
 
   if (contact) {
@@ -142,7 +168,7 @@ export function ContactPicker({
       <label
         id={labelId}
         htmlFor={`${listId}-input`}
-        className="text-[13px] font-medium text-ink-body"
+        className={isFilter ? "sr-only" : "text-[13px] font-medium text-ink-body"}
       >
         {text.label}
       </label>
@@ -156,7 +182,7 @@ export function ContactPicker({
           aria-autocomplete="list"
           aria-activedescendant={activeOptionId}
           autoComplete="off"
-          placeholder={text.placeholder}
+          placeholder={isFilter ? FILTER_PLACEHOLDER[kind] : text.placeholder}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -169,9 +195,11 @@ export function ContactPicker({
           leading={<SearchIcon size={18} />}
           frameClassName="flex-1"
         />
-        <IconButton label={text.add} variant="secondary" onClick={() => setCreating(true)}>
-          <PlusIcon size={18} />
-        </IconButton>
+        {!isFilter && (
+          <IconButton label={text.add} variant="secondary" onClick={() => setCreating(true)}>
+            <PlusIcon size={18} />
+          </IconButton>
+        )}
 
         {open && (
           <ul
@@ -210,7 +238,7 @@ export function ContactPicker({
             ))}
             {options.length === 0 && (
               <li role="presentation" className="px-3 py-3 text-sm text-ink-muted">
-                {search.isFetching ? "Đang tìm…" : text.empty}
+                {search.isFetching ? "Đang tìm…" : isFilter ? "Không tìm thấy" : text.empty}
               </li>
             )}
           </ul>

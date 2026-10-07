@@ -1,6 +1,13 @@
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Link, useBlocker, useNavigate, useParams, useSearchParams } from "react-router";
+import {
+  Link,
+  useBlocker,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import { uuidv7 } from "../../../shared/uuid";
 import { api } from "../../api/client";
 import { ApiError, call, errorMessage } from "../../api/errors";
@@ -13,8 +20,10 @@ import {
   useUpdatePurchase,
 } from "../../api/inventory";
 import { documentQueryKey, productQueryKey } from "../../api/keys";
+import { TAB_BAR_CLEARANCE } from "../../components/layout/MobileTabBar";
 import { Alert } from "../../components/ui/Alert";
 import { Button, IconButton } from "../../components/ui/Button";
+import { buttonClass } from "../../components/ui/button-class";
 import { Dialog } from "../../components/ui/Dialog";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ChevronLeftIcon, TrashIcon } from "../../components/ui/icons";
@@ -30,6 +39,7 @@ import { useToast } from "../../components/ui/toast-context";
 import { cn } from "../../lib/cn";
 import { formatDate, formatDateTime, formatMoney, formatQty } from "../../lib/format";
 import { ContactPicker, type PickedContact } from "../contacts/ContactPicker";
+import type { RestockPreset } from "../dashboard/DashboardPage";
 import { DocumentStatusBadge } from "../documents/DocumentStatusBadge";
 import { ProductAdder } from "./ProductAdder";
 import {
@@ -169,6 +179,7 @@ function Row({
 
 function PurchaseEditor({ doc, initial }: { doc: DocumentDetail | null; initial: PurchaseDraft }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [params] = useSearchParams();
@@ -246,6 +257,48 @@ function PurchaseEditor({ doc, initial }: { doc: DocumentDetail | null; initial:
       })
       .catch((err: unknown) => toast({ tone: "error", message: errorMessage(err) }));
   }, [presetId, queryClient, toast]);
+
+  // "Tạo phiếu nhập" ở Tổng quan: điền sẵn các mặt hàng cần nhập với số lượng gợi ý.
+  const restockPreset = doc
+    ? undefined
+    : (location.state as Partial<RestockPreset> | null)?.restock;
+  const restockDone = useRef(false);
+  useEffect(() => {
+    if (!restockPreset?.length || restockDone.current) return;
+    restockDone.current = true;
+    // Xóa state để tải lại trang / quay lại không điền lần nữa.
+    void navigate({ search: location.search }, { replace: true, state: null });
+    setAdding(true);
+    void Promise.allSettled(
+      restockPreset.map((r) =>
+        queryClient.fetchQuery({
+          queryKey: productQueryKey(r.productId),
+          queryFn: () => call(api.products[":id"].$get({ param: { id: r.productId } })),
+        }),
+      ),
+    ).then((results) => {
+      setAdding(false);
+      // Gộp vào phiếu (người dùng có thể đã quét thêm hàng trong lúc chờ tải; trùng thì cộng dồn).
+      let lines: PurchaseLine[] = draftRef.current.lines;
+      let failed = 0;
+      results.forEach((res, i) => {
+        if (res.status === "fulfilled") {
+          lines = addProduct(lines, res.value, undefined, restockPreset[i]!.qty).lines;
+        } else failed++;
+      });
+      const next = { ...draftRef.current, lines };
+      draftRef.current = next;
+      setDraft(next);
+      // Có hàng điền sẵn thì rời trang phải hỏi như phiếu đã sửa.
+      if (lines.length > 0) setDirty(true);
+      if (failed > 0) {
+        toast({
+          tone: "error",
+          message: `Không tải được ${failed} mặt hàng, hãy thêm lại bằng tay`,
+        });
+      }
+    });
+  }, [restockPreset, location.search, navigate, queryClient, toast]);
 
   // F3: về ô tìm hàng.
   useEffect(() => {
@@ -505,7 +558,12 @@ function PurchaseEditor({ doc, initial }: { doc: DocumentDetail | null; initial:
             </div>
           )}
 
-          <div className="mt-auto flex flex-col gap-2 rounded-b-card border-t border-line bg-table-head px-4 py-3.5">
+          {/* Cố định đáy màn hình trên điện thoại (trên thanh tab dưới) để không phải cuộn hết
+              phiếu dài mới bấm được "Lưu nháp"/"Hoàn thành"; giữ nguyên trong luồng ở máy tính. */}
+          <div
+            className="sticky z-10 mt-auto flex flex-col gap-2 rounded-b-card border-t border-line bg-table-head px-4 py-3.5 md:static"
+            style={{ bottom: TAB_BAR_CLEARANCE }}
+          >
             <div className="flex gap-2">
               <Button
                 variant="secondary"
@@ -764,11 +822,21 @@ function PurchaseView({ doc }: { doc: DocumentDetail }) {
               ` · Hủy lúc ${formatDateTime(doc.cancelledAt)}${doc.cancelledBy ? ` bởi ${doc.cancelledBy.name}` : ""}`}
           </p>
         </div>
-        {doc.status === "completed" && (
-          <Button variant="secondary" onClick={() => setConfirm(true)}>
-            Hủy phiếu
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <a
+            href={`/in/phieu-nhap/${doc.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClass({ variant: "secondary" })}
+          >
+            In phiếu
+          </a>
+          {doc.status === "completed" && (
+            <Button variant="secondary" onClick={() => setConfirm(true)}>
+              Hủy phiếu
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-start gap-4">

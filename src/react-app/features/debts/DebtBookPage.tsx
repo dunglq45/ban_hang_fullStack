@@ -20,6 +20,7 @@ import { Input } from "../../components/ui/Input";
 import { KpiStrip } from "../../components/ui/KpiStrip";
 import { Pagination } from "../../components/ui/Pagination";
 import { Select } from "../../components/ui/Select";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { Spinner } from "../../components/ui/Spinner";
 import { Table, TBody, TD, TH, THead, TR } from "../../components/ui/Table";
 import { Tabs } from "../../components/ui/Tabs";
@@ -206,9 +207,20 @@ export function DebtBookPage() {
           {list.isError ? (
             <Alert className="m-3">{errorMessage(list.error)}</Alert>
           ) : list.isPending ? (
-            <div className="flex justify-center py-10">
-              <Spinner label="Đang tải" />
-            </div>
+            <ul aria-hidden="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <li
+                  key={i}
+                  className="flex min-h-16 items-center gap-3 border-b border-subtle px-4 py-3"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <Skeleton className="h-4" style={{ width: `${55 + (i % 3) * 10}%` }} />
+                    <Skeleton className="h-3 w-24" />
+                  </span>
+                  <Skeleton className="h-4 w-16" />
+                </li>
+              ))}
+            </ul>
           ) : items.length === 0 ? (
             <EmptyState
               title={q ? "Không tìm thấy" : showAll ? text.emptyAll : text.emptyList}

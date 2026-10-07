@@ -330,7 +330,7 @@ describe("màn Bán hàng", () => {
     await user.click(payButton());
     await screen.findByText("Đã bán HD000231");
     expect(open).toHaveBeenCalledOnce();
-    expect(printWindow.location.href).toBe("/in/hoa-don/doc-1");
+    expect(printWindow.location.href).toBe("/in/hoa-don/doc-1?auto=1");
     open.mockRestore();
   });
 

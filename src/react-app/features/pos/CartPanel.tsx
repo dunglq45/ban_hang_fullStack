@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useContact, usePosProducts } from "../../api/pos";
+import { TAB_BAR_CLEARANCE } from "../../components/layout/MobileTabBar";
 import { Button, IconButton } from "../../components/ui/Button";
 import { Checkbox } from "../../components/ui/Checkbox";
 import { Dialog } from "../../components/ui/Dialog";
@@ -523,11 +524,7 @@ function CheckoutFooter({ variant }: { variant: "panel" | "page" }) {
         variant === "panel" ? "rounded-b-card" : "sticky z-20",
       )}
       // Trang điện thoại: nút hoàn tất luôn thấy được, nằm ngay trên thanh tab dưới.
-      style={
-        variant === "page"
-          ? { bottom: "calc(69px + max(0px, env(safe-area-inset-bottom) - 10px))" }
-          : undefined
-      }
+      style={variant === "page" ? { bottom: TAB_BAR_CLEARANCE } : undefined}
     >
       <Checkbox
         label="In hóa đơn"

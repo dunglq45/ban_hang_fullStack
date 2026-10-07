@@ -197,6 +197,14 @@ describe("phiếu thu nợ khách", () => {
     const pc = await (await store.owner.api.payments.$post({ json: input })).json();
     expect(pc).toMatchObject({ code: "PC000001", contact: { debt: 1_000_000 } });
 
+    // Staff chỉ xem được phiếu thu, không xem được phiếu chi (ngoài phạm vi thu nợ của staff).
+    const denied = await staff.api.payments[":id"].$get({ param: { id: pc.id } });
+    expect((await errorOf(denied)).code).toBe("FORBIDDEN");
+    const seen = await (
+      await store.owner.api.payments[":id"].$get({ param: { id: pc.id } })
+    ).json();
+    expect(seen.code).toBe("PC000001");
+
     const wrong = await store.owner.api.payments.$post({ json: paymentInput(ncc.id, 1_000) });
     expect((await errorOf(wrong)).code).toBe("INVALID_CONTACT");
     const tooMuch = await store.owner.api.payments.$post({

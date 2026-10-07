@@ -1,6 +1,14 @@
 import type { ComponentType } from "react";
 import type { CurrentUser } from "../../api/auth";
-import { BoxIcon, CartIcon, ChartIcon, LedgerIcon, MoreIcon, SettingsIcon } from "../ui/icons";
+import {
+  BoxIcon,
+  CartIcon,
+  ChartIcon,
+  LedgerIcon,
+  MoreIcon,
+  ReceiptIcon,
+  SettingsIcon,
+} from "../ui/icons";
 
 export interface NavItem {
   to: string;
@@ -23,6 +31,12 @@ const SALES: NavItem = {
   label: "Bán hàng",
   icon: CartIcon,
   matches: ["/ban-hang"],
+};
+const INVOICES: NavItem = {
+  to: "/hoa-don",
+  label: "Hóa đơn",
+  icon: ReceiptIcon,
+  matches: ["/hoa-don"],
 };
 const PRODUCTS: NavItem = {
   to: "/hang-hoa",
@@ -53,7 +67,7 @@ const SETTINGS: NavItem = {
 
 /** Menu bên trái (màn hình ≥ 768px). */
 export const SIDEBAR_SECTIONS: NavSection[] = [
-  { title: "Vận hành", items: [SALES, PRODUCTS, DEBTS] },
+  { title: "Vận hành", items: [SALES, INVOICES, PRODUCTS, DEBTS] },
   { title: "Báo cáo", items: [DASHBOARD] },
 ];
 
@@ -65,7 +79,13 @@ export const MOBILE_TABS: NavItem[] = [
   PRODUCTS,
   DEBTS,
   { ...DASHBOARD, label: "Báo cáo" },
-  { ...SETTINGS, label: "Thêm", icon: MoreIcon },
+  // Trang "Thêm" chứa lối vào Hóa đơn, Nhập hàng, Kiểm kho (thanh dưới không có các mục này).
+  {
+    ...SETTINGS,
+    label: "Thêm",
+    icon: MoreIcon,
+    matches: ["/cai-dat", "/hoa-don"],
+  },
 ];
 
 export function visibleItems(items: NavItem[], role: CurrentUser["role"]) {

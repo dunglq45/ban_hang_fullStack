@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { loginSchema, registerSchema } from "../../shared/schemas/auth";
+import { changePasswordSchema, loginSchema, registerSchema } from "../../shared/schemas/auth";
 import { getAuthDb } from "../db/client";
 import { clearSessionCookie, writeSessionCookie } from "../lib/session-cookie";
 import { validate } from "../lib/validate";
@@ -7,6 +7,7 @@ import { rateLimit } from "../middleware/rate-limit";
 import { requireAuth } from "../middleware/session";
 import { login, logout, register } from "../services/auth";
 import { getStore } from "../services/store";
+import { changeOwnPassword } from "../services/users";
 import type { AppEnv } from "../types";
 
 export const authRoutes = new Hono<AppEnv>()
@@ -28,4 +29,8 @@ export const authRoutes = new Hono<AppEnv>()
   .get("/me", requireAuth, async (c) => {
     const store = await getStore(c.get("db"));
     return c.json({ user: c.get("user"), store });
+  })
+  .put("/password", requireAuth, validate("json", changePasswordSchema), async (c) => {
+    await changeOwnPassword(c.get("db"), c.get("user"), c.get("session")!.id, c.req.valid("json"));
+    return c.json({ ok: true });
   });

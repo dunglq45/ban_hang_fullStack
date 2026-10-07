@@ -100,7 +100,7 @@ export function PaymentDialog({ contact: initial, onClose }: PaymentDialogProps)
         onSuccess: ({ payment, replayed }) => {
           unsureKeys.delete(contact.id);
           if (printWindow) {
-            printWindow.location.href = `/in/${payment.type === "disbursement" ? "phieu-chi" : "phieu-thu"}/${payment.id}`;
+            printWindow.location.href = `/in/${payment.type === "disbursement" ? "phieu-chi" : "phieu-thu"}/${payment.id}?auto=1`;
           }
           toast(
             replayed
