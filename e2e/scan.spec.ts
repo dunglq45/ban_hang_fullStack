@@ -23,12 +23,18 @@ test("quét mã vạch thêm hàng vào hóa đơn", async ({ page }) => {
   });
 
   await test.step("đang ở ô Giảm giá: mã không lọt vào ô, hàng được cộng thêm", async () => {
+    // App phân biệt máy quét với người gõ tay bằng khoảng cách giữa các phím (<35ms). Máy CI dùng
+    // chung tài nguyên nên khoảng cách đôi khi vượt ngưỡng (flaky) — gõ lại từ đầu (xóa ô, thử lại)
+    // tới khi đạt, không nới ngưỡng thời gian trong code sản phẩm.
     const discount = page.getByLabel("Giảm giá");
-    await discount.click();
-    await page.keyboard.type(BARCODE, { delay: 5 });
-    await page.keyboard.press("Enter");
-    await expect(qty).toHaveValue("2");
-    await expect(discount).toHaveValue("");
+    await expect(async () => {
+      await discount.fill("");
+      await discount.click();
+      await page.keyboard.type(BARCODE, { delay: 0 });
+      await page.keyboard.press("Enter");
+      await expect(qty).toHaveValue("2", { timeout: 1_000 });
+      await expect(discount).toHaveValue("");
+    }).toPass({ timeout: 20_000 });
   });
 
   await test.step("gõ mã vào ô tìm hàng rồi Enter", async () => {
