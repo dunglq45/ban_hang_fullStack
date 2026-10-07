@@ -138,6 +138,7 @@ CREATE TABLE documents (            -- hóa đơn bán, phiếu nhập, trả h�
   UNIQUE (store_id, idempotency_key)
 );
 CREATE INDEX idx_documents_list ON documents (store_id, type, status, created_at);
+CREATE INDEX idx_documents_time ON documents (store_id, type, created_at);   -- danh sách mọi trạng thái, lọc ngày (migration 0003)
 CREATE INDEX idx_documents_contact ON documents (store_id, contact_id, created_at);
 
 CREATE TABLE document_lines (
@@ -190,6 +191,8 @@ CREATE TABLE payments (             -- phiếu thu (thu nợ khách) / phiếu c
   UNIQUE (store_id, code),
   UNIQUE (store_id, idempotency_key)
 );
+CREATE INDEX idx_payments_type_time ON payments (store_id, type, status, created_at);  -- tổng thu/chi theo tháng (migration 0003)
+CREATE INDEX idx_payments_contact ON payments (store_id, contact_id, created_at);     -- lần thu/trả gần nhất (migration 0003)
 
 CREATE TABLE debt_entries (         -- sổ cái công nợ, chỉ INSERT
   id TEXT PRIMARY KEY,

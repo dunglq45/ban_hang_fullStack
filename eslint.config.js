@@ -53,7 +53,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["*.config.{ts,js}", "scripts/**/*.ts"],
+    files: ["*.config.{ts,js}", "scripts/**/*.ts", "e2e/**/*.ts"],
     languageOptions: { globals: globals.node },
   },
 ]);

@@ -238,6 +238,8 @@ export const documents = sqliteTable(
     unique("documents_store_code_unique").on(t.storeId, t.code),
     unique("documents_store_idempotency_unique").on(t.storeId, t.idempotencyKey),
     index("idx_documents_list").on(t.storeId, t.type, t.status, t.createdAt),
+    // Danh sách theo loại, mọi trạng thái, mới nhất trước / lọc khoảng ngày (trang Hóa đơn mặc định).
+    index("idx_documents_time").on(t.storeId, t.type, t.createdAt),
     index("idx_documents_contact").on(t.storeId, t.contactId, t.createdAt),
   ],
 );
@@ -320,6 +322,9 @@ export const payments = sqliteTable(
     check("payments_status_check", sql`${t.status} IN ('completed','cancelled')`),
     unique("payments_store_code_unique").on(t.storeId, t.code),
     unique("payments_store_idempotency_unique").on(t.storeId, t.idempotencyKey),
+    // Tổng thu/chi trong tháng (Sổ nợ) và lần thu/trả gần nhất của một đối tác.
+    index("idx_payments_type_time").on(t.storeId, t.type, t.status, t.createdAt),
+    index("idx_payments_contact").on(t.storeId, t.contactId, t.createdAt),
   ],
 );
 

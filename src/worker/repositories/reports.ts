@@ -83,16 +83,22 @@ export function reportsRepository(db: Database, storeId: string) {
           qty,
           revenue,
         })
-        .from(documentLines)
-        .innerJoin(
-          documents,
-          and(eq(documents.id, documentLines.documentId), eq(documents.storeId, storeId)),
-        )
+        // CROSS JOIN buộc SQLite đi từ hóa đơn trong kỳ (idx_documents_list theo created_at) rồi
+        // lấy dòng qua idx_lines_doc. Viết INNER JOIN thì planner chọn quét mọi dòng chứng từ của
+        // cửa hàng theo idx_lines_product (để khỏi sắp xếp cho GROUP BY), chậm dần theo thời gian.
+        .from(documents)
+        .crossJoin(documentLines)
         .leftJoin(
           products,
           and(eq(products.id, documentLines.productId), eq(products.storeId, storeId)),
         )
-        .where(and(eq(documentLines.storeId, storeId), sold(r)))
+        .where(
+          and(
+            sold(r),
+            eq(documentLines.storeId, storeId),
+            eq(documentLines.documentId, documents.id),
+          ),
+        )
         .groupBy(documentLines.productId)
         .having(sql`${qty} > 0`)
         .orderBy(

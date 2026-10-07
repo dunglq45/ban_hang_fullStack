@@ -13,6 +13,7 @@
     "vitest.config.ts",
     "drizzle.config.ts",
     "eslint.config.js",
+    "playwright.config.ts",
     "scripts"
   ]
 }

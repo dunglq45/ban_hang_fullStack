@@ -1,5 +1,6 @@
 // Ứng dụng Hono: middleware chung và toàn bộ route dưới /api.
 import { Hono } from "hono";
+import { secureHeaders } from "hono/secure-headers";
 import { z } from "zod";
 import { vi } from "zod/locales";
 import { csrf } from "./middleware/csrf";
@@ -20,7 +21,9 @@ z.config(vi());
 // Route phải khai báo theo chuỗi (method chaining) để Hono RPC suy ra type cho client.
 export const app = new Hono<AppEnv>()
   .basePath("/api")
-  .use(csrf, session)
+  // Header bảo mật mặc định của Hono (nosniff, chặn nhúng iframe, HSTS, CORP same-origin...).
+  // Trang SPA/static do Cloudflare phục vụ thì đặt header trong public/_headers.
+  .use(secureHeaders(), csrf, session)
   .get("/health", (c) => c.json({ ok: true }))
   .route("/auth", authRoutes)
   .route("/store", storeRoutes)

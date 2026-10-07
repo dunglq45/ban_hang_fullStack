@@ -508,6 +508,11 @@ export function documentedRoutes(): string[] {
   return ENDPOINTS.map((e) => `${e.method.toUpperCase()} /api${e.path}`);
 }
 
+/** Quyền truy cập đã khai báo của từng route, "METHOD /api/path" → access (test ma trận phân quyền). */
+export function documentedAccess(): Map<string, Access> {
+  return new Map(ENDPOINTS.map((e) => [`${e.method.toUpperCase()} /api${e.path}`, e.access]));
+}
+
 export function buildOpenApi() {
   const paths: Record<string, Record<string, unknown>> = {};
   for (const e of ENDPOINTS) {

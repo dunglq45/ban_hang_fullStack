@@ -5,6 +5,7 @@
 // để sổ cái kho và sổ cái công nợ khớp với số dư ngay từ đầu.
 // Sau đó src/worker/dev/seed-activity.ts tạo hoạt động 7 ngày qua (~40 hóa đơn, 3 phiếu nhập,
 // thu nợ, trả nợ NCC, 1 phiếu kiểm kho) bằng chính các service, qua D1 local của getPlatformProxy.
+// Biến môi trường WRANGLER_STATE_DIR (vd. `.wrangler/e2e`) chọn thư mục D1 local khác mặc định.
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -17,6 +18,7 @@ import { type SeedContext, seedActivity } from "../src/worker/dev/seed-activity"
 import { getPlatformProxy } from "wrangler";
 
 const DB_NAME = "store-app-db";
+const STATE_DIR = process.env.WRANGLER_STATE_DIR;
 const PASSWORD = "123456";
 const DAY = 86_400_000;
 
@@ -670,7 +672,9 @@ async function main() {
   // `wrangler d1 execute --file` không nguyên tử: nếu lỗi giữa chừng, D1 local có thể bị xóa dở.
   // Khi đó sửa lỗi rồi chạy lại seed (seed luôn xóa sạch trước khi nạp).
   // Một chuỗi lệnh duy nhất qua shell (pnpm trên Windows là .cmd), đường dẫn đặt trong ngoặc kép.
-  const result = spawnSync(`pnpm exec wrangler d1 execute ${DB_NAME} --local --file="${file}"`, {
+  const persistTo = STATE_DIR ? ` --persist-to="${resolve(STATE_DIR)}"` : "";
+  const command = `pnpm exec wrangler d1 execute ${DB_NAME} --local -c wrangler.jsonc${persistTo} --file="${file}"`;
+  const result = spawnSync(command, {
     stdio: ["inherit", "ignore", "inherit"], // bỏ JSON kết quả từng câu lệnh cho gọn
     shell: true,
   });
@@ -679,10 +683,11 @@ async function main() {
   console.log(
     "Tạo hoạt động 7 ngày qua qua các service (hóa đơn, phiếu nhập, thu nợ, kiểm kho)...",
   );
-  // Cùng D1 local (.wrangler/state) với `wrangler d1 execute --local` và `pnpm dev`.
+  // Cùng D1 local với `wrangler d1 execute --local` và `pnpm dev` (getPlatformProxy nhận thẳng
+  // thư mục v3, còn --persist-to và plugin Vite tự thêm "v3").
   const proxy = await getPlatformProxy<{ DB: Parameters<typeof seedActivity>[0] }>({
     configPath: "wrangler.jsonc",
-    persist: true,
+    persist: STATE_DIR ? { path: resolve(STATE_DIR, "v3") } : true,
   });
   try {
     const done = await seedActivity(proxy.env.DB, context);

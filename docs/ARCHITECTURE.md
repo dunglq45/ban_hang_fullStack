@@ -51,7 +51,10 @@ Scaffold bằng template React + Worker của Cloudflare (`@cloudflare/vite-plug
 │     ├─ components/layout/    # AppShell (Sidebar + Header), MobileTabBar
 │     ├─ features/             # auth, pos, products, purchases, stock-count, debts, dashboard, settings
 │     └─ styles/
-└─ test/                       # test API với vitest-pool-workers
+├─ test/                       # test API với vitest-pool-workers
+├─ e2e/                        # E2E Playwright (pnpm test:e2e), D1 local riêng .wrangler/e2e
+├─ public/_headers             # header bảo mật cho file tĩnh (SPA)
+└─ .github/workflows/          # ci.yml (PR), deploy.yml (main → production, chạy tay → preview)
 ```
 
 ## Quyết định chính
@@ -73,9 +76,12 @@ Scaffold bằng template React + Worker của Cloudflare (`@cloudflare/vite-plug
 - Với mọi request ghi (POST/PUT/PATCH/DELETE), yêu cầu header `Content-Type: application/json` và header `X-Requested-With: fetch` để chặn CSRF dạng form.
 - Giới hạn đăng nhập sai: tối đa 5 lần / 15 phút / số điện thoại (bảng `login_attempts`).
 - Không log mật khẩu, token.
+- Header bảo mật: `secureHeaders()` của Hono cho `/api/*`, `public/_headers` cho trang SPA.
+- Báo cáo rà soát đầy đủ: `docs/SECURITY-REVIEW.md`; test `test/api/access-matrix.test.ts` kiểm tra phân quyền mọi route.
 
 ## Hiệu năng D1
 - Mọi index bắt đầu bằng `store_id`.
+- Test `test/db/query-plans.test.ts` chạy EXPLAIN QUERY PLAN mọi câu SQL của màn danh sách/báo cáo: không quét toàn bảng, không đọc hết lịch sử cửa hàng ở bảng chứng từ/sổ cái.
 - Danh sách luôn phân trang (mặc định 20, tối đa 100).
 - Báo cáo MVP query trực tiếp trên `documents`/`document_lines`. Khi dữ liệu lớn, thêm bảng chốt số liệu theo ngày (ngoài phạm vi MVP).
 - Kiểm tra giới hạn hiện hành của D1 (dung lượng mỗi database, số câu lệnh mỗi batch, thời gian query) trong docs Cloudflare. Giới hạn số dòng mỗi phiếu là 200 và mỗi lần import là 500 dòng để batch không quá dài.

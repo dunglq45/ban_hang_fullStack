@@ -31,7 +31,9 @@ Toàn bộ chữ trên giao diện là tiếng Việt.
 - `pnpm db:generate`: sinh SQL migration vào `migrations/` từ `src/worker/db/schema.ts`.
 - `pnpm db:migrate:local`: áp dụng migration vào D1 local. Chạy lại sau mỗi lần `db:generate`.
 - `pnpm db:seed:local`: XÓA SẠCH D1 local rồi nạp dữ liệu mẫu "Tạp hóa Minh Anh". Tài khoản: chủ `0900000001`, nhân viên `0900000002`, mật khẩu `123456`.
-- `pnpm db:migrate:remote`, `pnpm deploy`: chỉ người dùng tự chạy (hook chặn).
+- `pnpm test:e2e`: E2E Playwright (`e2e/`), tự chạy `vite dev` cổng 5180 với D1 local riêng `.wrangler/e2e` (nạp lại seed mỗi lần), dùng Chrome cài trên máy. Không nằm trong `pnpm test`.
+- `pnpm build:preview`: build cho môi trường `preview` (`env.preview` trong `wrangler.jsonc`, D1/R2 riêng).
+- `pnpm db:migrate:remote`, `pnpm db:migrate:preview`, `pnpm run deploy`, `pnpm run deploy:preview`: CHỈ người dùng tự chạy, Claude không bao giờ chạy. Lưu ý: hook `guard.sh` chỉ bắt `db:migrate:remote` (và `pnpm deploy`, `--remote`, `wrangler deploy` khi gõ thẳng trong lệnh); `db:migrate:preview`, `pnpm run deploy`, `pnpm run deploy:preview` KHÔNG bị hook chặn vì cờ `--remote`/`wrangler deploy` nằm trong package.json. Người dùng gõ `pnpm run deploy` (không phải `pnpm deploy`, đó là lệnh có sẵn của pnpm). Hướng dẫn deploy, sao lưu, log, migration: `docs/VAN-HANH.md`.
 - `pnpm cf-typegen`: sinh lại `worker-configuration.d.ts` (type `Env` + runtime). Chạy sau khi sửa `wrangler.jsonc`.
 
 Lưu ý môi trường:

@@ -108,3 +108,13 @@ describe("middleware lỗi", () => {
     expect(err.message).toBe("Vui lòng nhập số điện thoại");
   });
 });
+
+describe("header bảo mật", () => {
+  it("response API (cả khi lỗi) có nosniff, chặn nhúng iframe, HSTS", async () => {
+    for (const res of [await rawFetch("/api/health"), await rawFetch("/api/auth/me")]) {
+      expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      expect(res.headers.get("X-Frame-Options")).toBe("SAMEORIGIN");
+      expect(res.headers.get("Strict-Transport-Security")).toContain("max-age=");
+    }
+  });
+});
